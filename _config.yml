@@ -12,7 +12,7 @@ keyword: "Computers, Tech, Compilers, z/OS, Open Source"
 future: true
 
 # SNS settings
-RSS: false
+RSS: true
 github_username: IgorTodorovskiIBM
 #facebook_username:  huxpro
 #linkedin_username:  firstname-lastname-idxxxx
