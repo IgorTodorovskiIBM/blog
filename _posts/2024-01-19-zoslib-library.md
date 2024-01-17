@@ -4,6 +4,7 @@ title:        "Exploring ZOSLIB: An open source z/OS library for porting"
 author:       "Igor Todorovski"
 header-img:   "img/in-post/ai_on_z.jpg"
 catalog:      true
+hidden: true
 tags:
     - zoslib
     - z/OS
