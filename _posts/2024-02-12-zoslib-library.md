@@ -13,7 +13,7 @@ tags:
 
 > Ever tried porting your favorite Linux tool to z/OS? As we'll see, it's not as simple as grabbing the source and building it on z/OS!
 
-My role at [z/OS Open Tools](https://github.com/ZOSOpenTools) involves the task of porting open-source tools to the [IBM z/OS operating system](https://www.ibm.com/products/zos).. This requires navigating through the various differences between Linux and z/OS, such as:
+My role at [z/OS Open Tools](https://github.com/ZOSOpenTools) involves the task of porting open-source tools to the [IBM z/OS operating system](https://www.ibm.com/products/zos). This requires navigating through the various differences between Linux and z/OS, such as:
 * C runtime differences ([GNU C Library (Glibc)](https://www.gnu.org/software/libc/) vs [z/OS C Runtime Library](https://www.ibm.com/docs/en/zos/3.1.0?topic=cc-zos-runtime-library-reference))
 * File system differences (z/OS UNIX/datasets on z/OS)
 * Endianness differences
