@@ -13,16 +13,16 @@ tags:
 
 > Ever tried porting your favorite Linux tool to z/OS? As we'll see, it's not as simple as grabbing the source and building it on z/OS!
 
-My role at [z/OS Open Tools](https://github.com/ZOSOpenTools) involves the task of porting open-source tools to the z/OS platform. This requires navigating through the various differences between Linux and z/OS, such as:
+My role at [z/OS Open Tools](https://github.com/ZOSOpenTools) involves the task of porting open-source tools to the [IBM z/OS operating system](https://www.ibm.com/products/zos).. This requires navigating through the various differences between Linux and z/OS, such as:
 * C runtime differences ([GNU C Library (Glibc)](https://www.gnu.org/software/libc/) vs [z/OS C Runtime Library](https://www.ibm.com/docs/en/zos/3.1.0?topic=cc-zos-runtime-library-reference))
-* file system differences (z/OS UNIX/datasets on z/OS)
-* endianness differences
-* security differences (RACF/SAF on z/OS)
-* codepages differences (EBCDIC/ASCII/UTF8 program support in z/OS). 
+* File system differences (z/OS UNIX/datasets on z/OS)
+* Endianness differences
+* Security differences (RACF/SAF on z/OS)
+* Codepages differences (EBCDIC/ASCII/UTF8 program support in z/OS). 
 
 More specifically, as we continue to port applications and libraries to z/OS, we consistently face a recurring issue — **essential C runtime APIs are missing on z/OS**, and creating custom workarounds at the application source level doesn't seem like the best solution.
 
-Adding to the complexity of porting to z/OS, z/OS UNIX supports file tag metadata that describe a file's encoding content. File tag metadata doesn't exist in Linux, but it's crucial in z/OS because programs can run in EBCDIC or ASCII mode. What makes file tags interesting is that, combined with the z/OS Enhanced ASCII services, z/OS can perform automatic conversion of files to and from the program's encoding upon read and write. This enables EBCDIC and ASCII programs to interpret file data correctly, irregardless of the program's mode. This feature greatly simplifies handling various codepages in applications. However, although file tags are great, many z/OS services generate files which have no file tag metadata (known as "untagged files"). So how are applications supposed to handle such files?
+Adding to the complexity of porting to z/OS, z/OS UNIX supports [file tag metadata](https://www.ibm.com/docs/en/zos/3.1.0?topic=ascii-file-tagging-in-enhanced) that describe a file's encoding content. File tag metadata doesn't exist in Linux, but it's crucial in z/OS because programs can run in EBCDIC or ASCII mode. What makes file tags interesting is that, combined with the z/OS Enhanced ASCII services, z/OS can perform automatic conversion of files to and from the program's encoding upon read and write. This enables EBCDIC and ASCII programs to interpret file data correctly, irregardless of the program's mode. This feature greatly simplifies handling files of various codepages in applications. However, although file tags are great, many z/OS services generate files with no file tag metadata (these are known as "untagged files"). How are applications supposed to handle such files?
 
 That's where **ZOSLIB** jumps in — it addresses many of these complexities and makes porting to z/OS a little bit simpler!
 
@@ -51,13 +51,13 @@ Now, let's explore the gaps that ZOSLIB aims to fill.
 
 File tags are very useful metadata for determining the underlying codepage of a file. However, z/OS does not make this metadata field mandatory. z/OS UNIX files can lack a tag, and such files are considered untagged. Complicating matters further is that by default, C LE `open()` and `creat()` functions generate untagged files even when the program is running in ASCII mode. Additional code is required to tag newly created files. 
 
-So why are untagged files an issue? This creates a problem because the application can not determine the true encoding of untagged files. This means that an EBCDIC-based program expecting text data will interpret the data one way and an ASCII-based program will interpret the data another way.
+So why are untagged files an issue? They're a problem because the application can not determine the true encoding of untagged files. This means that an EBCDIC-based program expecting text data will interpret the data one way and an ASCII-based program will interpret the data another way. Many applications address this by introducing an option or environment variable to toggle how untagged files are interpreted.
 
-To address this issue, in zoslib, we implemented an override for the C `open()` function that incorporates a heuristic (toggleable if needed by an environment variable), to determine the true encoding of untagged files. Additionally, since z/OS creates untagged files (and pipes) by default, and there is no toggle to control this behavior, we decided to override C `open()`, 'pipe()','creat()' to additionally tag all files/pipes to ASCII ISO8859-1 by default. This override can be adjusted via an environment variable (documented in the zoslib manpages). Currently, this feature only works for z/OS UNIX files but could potentially be extended to cover datasets as well. 
+To address this issue, in zoslib, we implemented an override for the C `open()` function that incorporates an **optimized heuristic** (toggleable if needed by an environment variable), that determines the true encoding of untagged files. Additionally, since z/OS creates untagged files (and pipes) by default, and there is no toggle to control this behavior, we decided to override C `open()`, 'pipe()', and 'creat()' to additionally tag all files/pipes to ASCII ISO8859-1 by default. This override can be adjusted via an environment variable (documented in the zoslib manpages). Currently, this feature only works for z/OS UNIX files but could potentially be extended to cover datasets as well. 
 
-When zoslib is added to your project and the macro -DZOSLIB_OVERRIDE_CLIB=1 is set, all references to `open` are mapped to a new zoslib `__open_ascii` function (defined [here](https://github.com/ibmruntimes/zoslib/blob/3a2b4b06aa52095be6c805f921b101e9ff8c9a15/src/zos-io.cc#L808)).
+When zoslib is added to your project and the macro -DZOSLIB_OVERRIDE_CLIB=1 is set, all references to `open()`, 'pipe()', and 'creat()' are mapped to a new zoslib function. In the case of `open`, it's mapped to `__open_ascii` function (defined [here](https://github.com/ibmruntimes/zoslib/blob/3a2b4b06aa52095be6c805f921b101e9ff8c9a15/src/zos-io.cc#L808)).
 
-This enhancement has enabled zoslib applications to seamlessly work with both legacy untagged data and tagged data. For our Git to z/OS port, this support reduced the number of changes by close to 50%!
+This enhancement has enabled zoslib applications to seamlessly work with both legacy untagged data and tagged data. For our Git to z/OS port, this entire support reduced the number of changes by close to 50%!
 
 ## Gap 2: Missing C Runtime APIs
 
@@ -181,7 +181,7 @@ If you're interested in porting to z/OS Open Tools and would like to learn how, 
 
 ## Contributing to ZOSLIB
 
-Contributions to ZOSLIB are encouraged, and the process involves opening pull requests at https://github.com/ibmruntimes/zoslib/pulls. Following the contribution guidelines ensures a smooth integration of your changes into the z/OS Open Source community.
+Contributions to ZOSLIB are encouraged, and the process involves opening pull requests at https://github.com/ibmruntimes/zoslib/pulls. 
 
 ## Future considerations for ZOSLIB
 * Consider creating routines to expose z/OS services like SAF / CMS APIs
@@ -189,4 +189,4 @@ Contributions to ZOSLIB are encouraged, and the process involves opening pull re
 * Add more missing POSIX functions!
 
 # Special Thanks
-Thank you to Mike Fulton, Gaby Baghdadi, Wayne Zhang, Sean Perry, Eric Janssen, Haritha D and many others for their contributions to ZOSLIB.
+Thank you to Mike Fulton, Gaby Baghdadi, Wayne Zhang, CW Cheung, Sean Perry, Eric Janssen, Haritha D and many others for their contributions to ZOSLIB.
