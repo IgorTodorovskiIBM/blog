@@ -11,13 +11,19 @@ tags:
     - Porting
 ---
 
-Ever tried porting your favorite Linux tool on z/OS? As we'll see, it's not as simple as grabbing the source and building it on z/OS, but porting open source tools to z/OS is exactly what I do as an active contributor to the [z/OS Open Tools](https://github.com/ZOSOpenTools) Github organization. Porting software to z/OS can be challenging due to the various differences between Linux systems and z/OS, including C runtime differences ([GNU C Library (Glibc)](https://www.gnu.org/software/libc/) vs [z/OS C Runtime Library](https://www.ibm.com/docs/en/zos/3.1.0?topic=cc-zos-runtime-library-reference)), file system differences (z/OS UNIX/datasets on z/OS), endianness differences, security differences (RACF/SAF on z/OS), and codepages differences (EBCDIC/ASCII/UTF8 program support in z/OS). 
+> Ever tried porting your favorite Linux tool on z/OS? As we'll see, it's not as simple as grabbing the source and building it on z/OS. 
+Porting open source tools to z/OS is exactly what I do as an active contributor to the [z/OS Open Tools](https://github.com/ZOSOpenTools) Github organization. Porting software to z/OS can be challenging due to the various differences between Linux systems and z/OS, including:
+* C runtime differences ([GNU C Library (Glibc)](https://www.gnu.org/software/libc/) vs [z/OS C Runtime Library](https://www.ibm.com/docs/en/zos/3.1.0?topic=cc-zos-runtime-library-reference))
+* file system differences (z/OS UNIX/datasets on z/OS)
+* endianness differences
+* security differences (RACF/SAF on z/OS)
+* codepages differences (EBCDIC/ASCII/UTF8 program support in z/OS). 
 
-And as the z/OS Open Tools community's efforts to port applications and libraries to z/OS continue, we consistently encounter a recurring issue — essential C runtime APIs are missing, and creating custom workarounds at the application level doesn't seem like the best solution. Is there a better solution?
+And as the z/OS Open Tools community's efforts to port applications and libraries to z/OS continue, we consistently encounter a recurring issue — **essential C runtime APIs are missing**, and creating custom workarounds at the application level doesn't seem like the best solution. Is there a better solution?
 
 Adding to the complexity of porting to z/OS, z/OS UNIX supports file tag metadata that describe a file's encoding content. File tag metadata doesn't exist in Linux, but it's crucial in z/OS because programs can run in EBCDIC or ASCII mode. What makes file tags interesting is that, combined with the z/OS Enhanced ASCII services, z/OS can perform automatic conversion of files to and from the program's encoding upon read and write. This enables EBCDIC and ASCII programs to interpret file data correctly, irregardless of the program's mode. This feature greatly simplifies handling various codepages in applications. However, although file tags are great, many z/OS services generate files which have no file tag metadata (known as "untagged files"). So how are applications supposed to handle such files?
 
-That's where ZOSLIB jumps in — it addresses many of these complexities.
+That's where **ZOSLIB** jumps in — it addresses many of these complexities.
 
 ## What is ZOSLIB?
 
