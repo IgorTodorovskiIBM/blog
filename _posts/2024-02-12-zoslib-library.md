@@ -20,7 +20,7 @@ My role at [z/OS Open Tools](https://github.com/ZOSOpenTools) involves the task 
 * security differences (RACF/SAF on z/OS)
 * codepages differences (EBCDIC/ASCII/UTF8 program support in z/OS). 
 
-More specifically, as we continue to port applications and libraries to z/OS continue, we consistently encounter a recurring issue — **essential C runtime APIs are missing on z/OS**, and creating custom workarounds at the application source level doesn't seem like the best solution.
+More specifically, as we continue to port applications and libraries to z/OS, we consistently face a recurring issue — **essential C runtime APIs are missing on z/OS**, and creating custom workarounds at the application source level doesn't seem like the best solution.
 
 Adding to the complexity of porting to z/OS, z/OS UNIX supports file tag metadata that describe a file's encoding content. File tag metadata doesn't exist in Linux, but it's crucial in z/OS because programs can run in EBCDIC or ASCII mode. What makes file tags interesting is that, combined with the z/OS Enhanced ASCII services, z/OS can perform automatic conversion of files to and from the program's encoding upon read and write. This enables EBCDIC and ASCII programs to interpret file data correctly, irregardless of the program's mode. This feature greatly simplifies handling various codepages in applications. However, although file tags are great, many z/OS services generate files which have no file tag metadata (known as "untagged files"). So how are applications supposed to handle such files?
 
