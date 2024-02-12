@@ -12,6 +12,7 @@ tags:
 ---
 
 > Ever tried porting your favorite Linux tool on z/OS? As we'll see, it's not as simple as grabbing the source and building it on z/OS. 
+
 Porting open source tools to z/OS is exactly what I do as an active contributor to the [z/OS Open Tools](https://github.com/ZOSOpenTools) Github organization. Porting software to z/OS can be challenging due to the various differences between Linux systems and z/OS, including:
 * C runtime differences ([GNU C Library (Glibc)](https://www.gnu.org/software/libc/) vs [z/OS C Runtime Library](https://www.ibm.com/docs/en/zos/3.1.0?topic=cc-zos-runtime-library-reference))
 * file system differences (z/OS UNIX/datasets on z/OS)
@@ -26,6 +27,10 @@ Adding to the complexity of porting to z/OS, z/OS UNIX supports file tag metadat
 That's where **ZOSLIB** jumps in — it addresses many of these complexities.
 
 ## What is ZOSLIB?
+
+<p style="text-align: center;">
+<img src="/blog/img/in-post/zoslib.png" alt="ZOSLIB" style="float:center;">
+</p>
 
 At its core, [ZOSLIB](https://github.com/ibmruntimes/zoslib) is an open source extension of the z/OS LE C Runtime Library, offering the following additional functionalities:
 
