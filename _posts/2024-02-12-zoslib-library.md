@@ -22,7 +22,7 @@ My role at [z/OS Open Tools](https://github.com/ZOSOpenTools) involves the task 
 
 One significant hurdle that we continue to encounter is the **absence of essential C runtime APIs on z/OS**. While we can implement workarounds at the application source-code level, it doesn't seem like a sustainable model. Can we do better?
 
-Moreover, adding to the complexity of porting to z/OS, z/OS UNIX supports [file tag metadata](https://www.ibm.com/docs/en/zos/3.1.0?topic=ascii-file-tagging-in-enhanced) that describe a file's encoding content. File tag metadata doesn't exist in Linux, but it's crucial in z/OS because programs can run in EBCDIC or ASCII mode. What makes file tags interesting is that, combined with the z/OS Enhanced ASCII services, z/OS can perform automatic conversion of files to and from the program's encoding upon read and write. This enables EBCDIC and ASCII programs to interpret file data correctly, irregardless of the program's mode. This feature greatly simplifies handling files of various codepages in applications. However, although file tags are great, many z/OS services generate files with no file tag metadata (these are known as "untagged files"). How are applications supposed to handle such "untagged" files?
+Moreover, adding to the complexity of porting to z/OS, z/OS UNIX supports [file tag metadata](https://www.ibm.com/docs/en/zos/3.1.0?topic=ascii-file-tagging-in-enhanced) that describe a file's encoding content. File tag metadata doesn't exist in Linux, but it's crucial in z/OS because programs can run in various character modes, including EBCDIC/ASCII/UTF8 mode. What makes file tags interesting is that, combined with the z/OS Enhanced ASCII services, z/OS can perform automatic conversion of files to and from the program's encoding upon read and write. This enables EBCDIC/ASCII/UTF8 programs to interpret file data correctly, irregardless of the program's character mode. This feature greatly simplifies handling files of various codepages in applications. However, although file tags are great, many z/OS services generate files with no file tag metadata (these are known as "untagged files"). How are applications supposed to handle such "untagged" files?
 
 That's where **ZOSLIB** jumps in — it addresses many of these complexities and makes porting to z/OS a little bit simpler!
 
@@ -53,7 +53,7 @@ File tags are very useful metadata for determining the underlying codepage of a 
 
 So why are untagged files an issue? They're a problem because the application can not determine the true encoding of untagged files. This means that an EBCDIC-based program expecting text data will interpret the data one way and an ASCII-based program will interpret the data another way. Many applications address this by introducing an option or environment variable to toggle how untagged files are interpreted.
 
-To address this issue, in zoslib, we implemented an override for the C `open()` function that incorporates an **optimized heuristic** (toggleable if needed by an environment variable), that determines the true encoding of untagged files. Additionally, since z/OS creates untagged files (and pipes) by default, and there is no toggle to control this behavior, we decided to override C `open()`, 'pipe()', and 'creat()' to additionally tag all files/pipes to ASCII ISO8859-1 by default. This override can be adjusted via an environment variable (documented in the zoslib manpages). Currently, this feature only works for z/OS UNIX files but could potentially be extended to cover datasets as well. 
+To address this issue, in zoslib, we implemented an override for the C `open()` function that incorporates an **optimized heuristic** (toggleable if needed by an environment variable), that determines the true encoding of untagged files. Additionally, since z/OS creates untagged files (and pipes) by default, and there is no toggle to control this behavior, we decided to override C `open()`, 'pipe()', and 'creat()' to additionally tag all files/pipes to ASCII ISO8859-1 by default. This override can be adjusted via an environment variable (documented in the zoslib manpages).
 
 When zoslib is added to your project and the macro -DZOSLIB_OVERRIDE_CLIB=1 is set, all references to `open()`, 'pipe()', and 'creat()' are mapped to a new zoslib function. In the case of `open`, it's mapped to `__open_ascii` function (defined [here](https://github.com/ibmruntimes/zoslib/blob/3a2b4b06aa52095be6c805f921b101e9ff8c9a15/src/zos-io.cc#L808)).
 
@@ -169,7 +169,7 @@ export ZOPEN_STABLE_DEPS="make curl gzip tar ncurses zoslib"
 The above snippet, taken from [lessport](https://github.com/ZOSOpenTools/lessport/blob/main/buildenv) describes how simple it is to leverage zoslib using the zopen build framework.
 Simply adding zoslib as a dependency (in `ZOPEN_STABLE_DEPS`) will instruct the build to add zoslib as a dependency and pass in the zoslib compiler flags. 
 
-> Note: The great news is that zoslib is now always added as a dependency so this step is technically redundant now!
+> Note: The great news is that zoslib is now always added as a dependency. As such, you no longer need to add zoslib as a dependency in ZOPEN_STABLE_DEPS.
 
 These flags automatically instruct the compiler to pick up the necessary header files and to link to the ZOSLIB static archives. If you're wondering, these flags are passed in via the .appenv file from your ZOSLIB_HOME installation. The file is generated by the [zoslibport build configuration](https://github.com/ZOSOpenTools/zoslibport/blob/4bf40195e8c646d34b3fdc6299c0f00a3f9442f1/buildenv#L45).
 
@@ -185,8 +185,8 @@ Contributions to ZOSLIB are encouraged, and the process involves opening pull re
 
 ## Future considerations for ZOSLIB
 * Consider creating routines to expose z/OS services like SAF / CMS APIs
-* Adding support for handling datasets seamlessly
 * Add more missing POSIX functions!
+* Support for building on V2R5 and V2R3 targets
 
 # Special Thanks
-Thank you to Mike Fulton, Gaby Baghdadi, Wayne Zhang, CW Cheung, Sean Perry, Eric Janssen, Haritha D and many others for their contributions to ZOSLIB.
+Thank you to [Mike Fulton](https://github.com/MikeFultonDev), [Gaby Baghdadi](https://github.com/gabylb), [Wayne Zhang](https://github.com/zsw007), [CW Cheung](https://github.com/ccw-1), [Sean Perry](https://github.com/perry-ca), [Eric Janssen](https://github.com/mfsysprog), [Haritha D](https://github.com/HarithaIBM) and many others for their contributions to ZOSLIB.
