@@ -15,24 +15,26 @@ tags:
 
 # Enhancing Vim on z/OS UNIX with Language Server Protocol (LSP)
 
-As a long-time Vim user who develops directly on z/OS UNIX, one feature I've always wanted is comprehensive Language Server Protocol (LSP) support.
+As a long-time Vim user who has been developing directly on z/OS UNIX (yes, I don't use VS Code!), one feature that I've always wanted is support for Language Server Protocol.
 
-Language Server Protocol (LSP), initially developed by Microsoft, standardizes communication between editors and language servers. This means that languages can develop one language server that can be sued across multiple editors, saving time for language maintainers and editors.
+Language Server Protocol (LSP), developed by Microsoft, is a protocol that standardizes communication between editors and language servers. This means language developers can create a single server that works across multiple editors, saving them and editor developers tons of time.
 
-* Code Completion: LSP's context-aware suggestions have significantly sped up my coding and reduced errors, enhancing productivity.
-* Inline Error Diagnostics: LSP's real-time error highlighting is invaluable, helping me maintain high code quality by catching issues as I type.
-* Code Navigation: LSP's navigation tools simplify exploring complex codebases, saving me time and reducing frustration.
-* Code Refactoring: LSP's automated refactoring tools have improved code readability and efficiency, making my projects easier to maintain.
+## Why LSPs are awesome:
 
-In this article, I'm going to describe how we can bring LSP support into Vim on z/OS.
+* Code Completion: LSP's context-aware suggestions can signifiantly speed up coding and reduce errors.
+* Inline Error Diagnostics: real-time error highlighting can help maintain clean code as you are developing.
+* Code Navigation: LSP's navigation tools simplify exploration of even the most complex codebases. This saves developers time and reduces frustration by offering a more efficient way to traverse code structures.
+
+While Neovim support for LSPs is a foundational, the existing port to z/OS is incomplete. 
+In this article, I'm going to describe how we can bring LSP support into Vim on z/OS. Yes, to vim!
 
 ## LSP Support in Vim on z/OS
 
 ### 1. Installing Vim
 
-Begin by ensuring Vim is installed on your system. If not, run the following command:
+Begin by installing Vim on your system using the [zopen package manager](https://github.com/ZOSOpenTools/meta):
 
-```
+```bash
 zopen install vim
 ```
 
@@ -42,13 +44,13 @@ Note: you'll need the latest Vim release which includes terminal support (requir
 
 vim-plug is a popular and efficient plugin manager for Vim. Install it with the following commands:
 
-```
+```bash
 curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 ```
 
 Then, create a `~/.vimrc` file (if it doesn't exist), and add this line to enable vim-plug:
 
-```
+```vim
 call plug#begin()
 " Add plugins here
 call plug#end()
@@ -69,7 +71,7 @@ Here's the updated code for your `~/.vimrc` file:
 ```vim
 call plug#begin()
 Plug 'prabirshrestha/vim-lsp'
-Plug 'mattn/vim-lsp-settings'
+Plug 'IgorTodorovskiIBM/vim-lsp-settings', { 'branch': 'zos' }
 
 Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
@@ -86,13 +88,16 @@ We've added the necessary plugins for autocompletion: asyncomplete.vim and async
 
 While vim-lsp-settings can automatically configure LSP for various languages, here's an alternative approach using the `:LspInstallServer` command:
 
+The Python LSP requires python3 so make sure it is in your path. 
+
+
 - Open a Python file in Vim.
 
-```
+```bash
 vim hello.py
 ```
 
-- Use the following command to install the Python language server (pyls):
+- Use the following command to install the Python language server (pyls). You will also need Clang installed.
 
 ```vim
 :LspInstallServer
@@ -100,7 +105,9 @@ vim hello.py
 
 Vim will prompt you to choose a server from a list. Select `pyls` (or the appropriate server for your Python version).
 
-INSERTIMAGE
+<p style="text-align: center;">
+<img src="/blog/img/in-post/python_vim.gif" alt="python vim" style="float:center;">
+</p>
 
 **Additional Notes:**
 
@@ -113,9 +120,21 @@ With this configuration, you should now benefit from LSP features like auto-comp
 
 ### 6. What about COBOL? 
 
-- Open a COBOL file in Vim.
+Prereqs: unzip and java
 
 ```
+zopen install unzip
+```
+
+Add Java (min version required is 8) to your PATH:
+```
+export PATH=/usr/lpp/java/IBM/J11.0_64/:$PATH
+
+```
+
+- Open a COBOL file in Vim.
+
+```bash
 vim hello.cbl
 ```
 
@@ -125,7 +144,11 @@ vim hello.cbl
 :LspInstallServer
 ```
 
-INSERTIMAGE
+Restart vim. You should see something like this
+
+<p style="text-align: center;">
+<img src="/blog/img/in-post/cobol_vim.gif" alt="python vim" style="float:center;">
+</p>
 
 **Additional Notes:**
 
