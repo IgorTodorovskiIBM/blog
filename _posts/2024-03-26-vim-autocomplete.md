@@ -13,7 +13,7 @@ tags:
     - Autocomplete
 ---
 
-As a long-time Vim user who developers directly on z/OS UNIX (yes, call me old school!), one feature that I've always wanted is the support for **Language Server Protocols**.
+As a long-time Vim user who develops directly on z/OS UNIX (call me old school!), one feature that I've always wanted is the support for **Language Server Protocols**.
 
 Language Server Protocol (LSP) is a protocol that standardizes the communication between editors and language servers. 
 
