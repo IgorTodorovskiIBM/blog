@@ -13,7 +13,7 @@ tags:
     - Autocomplete
 ---
 
-As a long-time Vim user who develops directly on z/OS UNIX (call me old school!), one feature that I've always wanted is the support for **Language Server Protocols**.
+As a long-time Vim user who develops directly on z/OS UNIX (call me old school!), one feature that I've always craved is the support for **Language Server Protocols**.
 
 Language Server Protocol (LSP) is a protocol that standardizes the communication between editors and language servers. 
 
@@ -22,18 +22,20 @@ Language Server Protocol (LSP) is a protocol that standardizes the communication
 
 <p style="text-align: center;">
 <img src="/blog/img/in-post/vim_front.gif" alt="cobol vim" style="float:center;">
+Vim auto-complete with the COBOL LSP
 </p>
 
 ## Why LSPs are handy for development
 
-LSP's enable code editors to support the following features:
+LSP's enable code editors to support the following features withouth having to write their own Langauge parsers and analyzers:
+
 * **Code Completion**: Auto-complete suggestions can signifiantly speed up coding because you no longer need to look up the APIs by browsing the manual or system interfaces.
-* **Error Diagnostics**: This feature helps you maintain clean code as you are actively writing code.
-* **Code Navigation**: It understands your code and eanbles you to easily navigate to code definitions!
+* **Error Diagnostics**: This feature helps you maintain clean code as you are actively writing new code.
+* **Code Navigation**: LSPs understand your code and eanbles you to easily navigate to code definitions and call sites.
 
-Ideally, we would want to port Neovim to z/OS as it provides better support for LSP's. But Vim also provides such support through it's plugin ecosystem.
+Ideally, to get the best support for LSPs in a terminal edidtor, we would want to port Neovim to z/OS. Unfortuantely, the neovim port is still in progress!
 
-So in the meantime, I'm going to describe how we can bring LSP support into Vim on z/OS. That's right, vim!
+So in the meantime, I'm going to describe how we can provide LSP support into Vim on z/OS.
 
 ## Adding LSP Support to Vim
 
@@ -49,7 +51,7 @@ zopen install vim
 
 ### 2. Installing the vim-plug plugin manager
 
-Before we set up the LSP support, we'll need to install a vim plugin manager. As of this writing, vim-plug appears to be the most popular. Install it with the following commands:
+Before we set up the LSP support, we'll need to install a vim plugin manager. As of this writing, [vim-plug](https://github.com/junegunn/vim-plug) appears to be the most popular. Install it with the following commands:
 
 ```bash
 # You will need curl for this operation (you can install it via zopen as above)
@@ -84,6 +86,7 @@ Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
 call plug#end()
 ```
+**Note:** We're using my fork of vim-lsp-settings since the COBOL LSP settings provided in the official repo do not currently work.
 
 Restart Vim and run `:PlugInstall` to install plugins.
 
@@ -94,13 +97,13 @@ Now let's explore how to set up an LSP for Python.
 **Note**: The Python LSP requires `python3` and `clang` in the PATH.
 
 
-- First, open a Python file with Vim. `vim-lsp-settings` associates LSPs with the extension, so make sure the extension is `.py`.
+First, open a Python file with Vim. vim-lsp-settings associates LSPs with the language extension, so make sure the extension is `.py`.
 
 ```bash
 vim hello.py
 ```
 
-- Use the following command to install the Python language server (pyls).
+Use the following command to install the Python language server (pyls).
 
 ```vim
 :LspInstallServer
@@ -115,9 +118,11 @@ After installing, restart vim or reload the file. You should now have auto-compl
 
 ### 5. What about languages like COBOL?
 
-Thanks to the z Open Editor efforts, COBOL has its own LSP. It's available at [https://github.com/eclipse-che4z/che-che4z-lsp-for-cobol](https://github.com/eclipse-che4z/che-che4z-lsp-for-cobol).
+Thanks to the zOpenEditor communnity efforts, COBOL has its own LSP. It's available at [https://github.com/eclipse-che4z/che-che4z-lsp-for-cobol](https://github.com/eclipse-che4z/che-che4z-lsp-for-cobol).
 
-Before installing the COBOL LSP, you will need `unzip` and `java` in your path:
+Before installing the COBOL LSP, you will need `unzip` and `java` in your path.
+
+Install unzip if you don't have it:
 ```
 zopen install unzip
 ```
@@ -146,11 +151,12 @@ Restart vim. You should see something like this
 <img src="/blog/img/in-post/cobol_vim.gif" alt="python vim" style="float:center;">
 </p>
 
-As you'll notice, there's a few issues with identing which will require additional investigation, but overall the autocomplete support seems to be working!
+As you'll notice, there's a few issues with indenting which will require additional investigation, but overall the autocomplete support seems to be working!
 
 **Next Steps**
-* Get REXX/JCL/Clangd LSPs working
-* Neovim: Port LuaJit so that we get all of the Neovim features enabled for z/OS!
+* Iron out the little quirks when editing with auto-complete support.
+* Get REXX/JCL/Clang LSPs working
+* Neovim! Port LuaJit so that we get all of the Neovim features enabled for z/OS!
 
 # Thank you
 Thanks for reading and thanks to Mike Fulton, Haritha D and the z/OS Open Tools contributors!
