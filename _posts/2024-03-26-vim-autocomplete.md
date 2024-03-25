@@ -87,6 +87,7 @@ We've added the necessary plugins for autocompletion: asyncomplete.vim and async
 While vim-lsp-settings can automatically configure LSP for various languages, here's an alternative approach using the `:LspInstallServer` command:
 
 - Open a Python file in Vim.
+
 ```
 vim hello.py
 ```
@@ -99,7 +100,7 @@ vim hello.py
 
 Vim will prompt you to choose a server from a list. Select `pyls` (or the appropriate server for your Python version).
 
-<insert image>
+INSERTIMAGE
 
 **Additional Notes:**
 
@@ -113,6 +114,7 @@ With this configuration, you should now benefit from LSP features like auto-comp
 ### 6. What about COBOL? 
 
 - Open a COBOL file in Vim.
+
 ```
 vim hello.cbl
 ```
@@ -123,7 +125,7 @@ vim hello.cbl
 :LspInstallServer
 ```
 
-<insert image>
+INSERTIMAGE
 
 **Additional Notes:**
 
