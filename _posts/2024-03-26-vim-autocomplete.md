@@ -2,7 +2,7 @@
 layout:       post
 title:        "Enhancing Vim on z/OS UNIX with Language Server Protocol (LSP) support"
 author:       "Igor Todorovski"
-header-img:   "img/in-post/tmux_bg.jpeg"
+header-img:   "img/post-bg-vim.jpg"
 catalog:      true
 hidden:       true
 tags:
