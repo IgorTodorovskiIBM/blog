@@ -13,7 +13,7 @@ tags:
     - Autocomplete
 ---
 
-As a long-time Vim user who develops directly on z/OS UNIX (call me old school!), one feature that I've always craved is the support for **Language Server Protocols**.
+As a long-time Vim user who develops directly on z/OS UNIX (you call me old school!), one feature that I've always craved is the support for **Language Server Protocols**.
 
 Language Server Protocol (LSP) is a protocol that standardizes the communication between editors and language servers. 
 
@@ -25,7 +25,7 @@ Language Server Protocol (LSP) is a protocol that standardizes the communication
 Vim auto-complete with the COBOL LSP
 </p>
 
-LSPs use JSON-RPC to communicate between the development tool and the language server. This allows the server to be implemented in any language and simplifies the protocol itself. The protocol defines a set of language-neutral features that can be supported by the server, such as code completion and go-to-definition. The specific integration of a language server into a tool is left up to the tool developers. For more information on what languages implement language servers, check out this [page](https://microsoft.github.io/language-server-protocol/implementors/servers/).
+LSP uses JSON-RPC to communicate between the development tool and the language server. This allows the server to be implemented in any language. The protocol defines a set of language-neutral features that can be supported by the server, such as code completion and go-to-definition. The specific integration of a language server into a tool is left up to the tool developers. For more information on what languages implement language servers, check out this [page](https://microsoft.github.io/language-server-protocol/implementors/servers/).
 
 ## Why LSPs are handy for development
 
