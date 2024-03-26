@@ -15,7 +15,7 @@ tags:
 
 As a long-time Vim user who develops directly on z/OS UNIX (yes, call me old school!), one feature that I've always wanted is the support for **Language Server Protocols**.
 
-If you're not aware of Language Servers and the Language Server Protocol (LSP), it's a protocol that standardizes the communication between editors and language servers. 
+If you're not aware of Language Servers and the Language Server Protocol (LSP), it's a protocol that standardizes the communication between editors (VS Code, Neovim, Emacs, VIM) and language servers. 
 
 [Microsoft's LSP website](https://microsoft.github.io/language-server-protocol/) summarizes it well:
 > The Language Server Protocol (LSP) defines the protocol used between an editor or IDE and a language server that provides language features like auto complete, go to definition, find all references etc. The goal of the Language Server Index Format (LSIF, pronounced like "else if") is to support rich code navigation in development tools or a Web UI without needing a local copy of the source code.
@@ -26,7 +26,9 @@ Vim auto-complete with the COBOL LSP
 </p>
 
 Language servers use JSON-RPC to communicate between the development tool and the language server. Using JSON-RPC allows the server to be implemented in any language. For example, the COBOL language server is written in Java and the Python language server is written in Python. 
-The protocol itself defines a set of features that can be supported by the server, such as code completion and go-to-definition. For more information on what languages implement language servers, check out this [page](https://microsoft.github.io/language-server-protocol/implementors/servers/).
+The protocol itself defines a set of features that can be supported by the server, such as code completion and go-to-definition. 
+
+For more information on the LSP architecture, visit Microsoft's [docs](https://microsoft.github.io/language-server-protocol/overviews/lsp/overview/). To find out what languages implement language servers, check out this [page](https://microsoft.github.io/language-server-protocol/implementors/servers/).
 
 ## Why LSP support is great for editors
 
