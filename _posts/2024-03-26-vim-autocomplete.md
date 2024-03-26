@@ -28,17 +28,17 @@ Vim auto-complete with the COBOL LSP
 Language servers use JSON-RPC to communicate between the development tool and the language server. Using JSON-RPC allows the server to be implemented in any language. For example, the COBOL language server is written in Java and the Python language server is written in Python. 
 The protocol itself defines a set of features that can be supported by the server, such as code completion and go-to-definition. For more information on what languages implement language servers, check out this [page](https://microsoft.github.io/language-server-protocol/implementors/servers/).
 
-## Why LSPs are handy for development
+## Why LSP support is great for editors
 
-LSP's enable code editors to support the following features withouth having to write their own Langauge parsers and analyzers:
+LSP's enable code editors to support the following features without having to write their own Langauge parsers and analyzers:
 
 * **Code Completion**: Auto-complete suggestions can signifiantly speed up coding because you no longer need to look up the APIs by browsing the manual or system interfaces.
 * **Error Diagnostics**: This feature helps you maintain clean code as you are actively writing new code.
 * **Code Navigation**: LSPs understand your code and eanbles you to easily navigate to code definitions and call sites.
 
-Ideally, to get the best support for LSPs in a terminal edidtor, we would want to port Neovim to z/OS. Unfortuantely, the neovim port is still in progress!
+Ideally, to get the best support for LSPs in a terminal editor, we would want to port Neovim to z/OS. Unfortuantely, the neovim port is still in progress!
 
-So in the meantime, I'm going to describe how we can provide LSP support into Vim on z/OS.
+So in the meantime, I'm going to describe how we can provide LSP support to Vim on z/OS.
 
 ## Adding LSP Support to Vim
 
@@ -75,8 +75,8 @@ In the next step, we'll install the LSP and auto-complete plugins through vim-pl
 
 We'll now use vim-plug to install the following plugins:
 
-- **vim-lsp/vim-lsp-settings**: These plugin simplify LSP configuration in Vim.
-- **asyncomplete.vim/asyncomplete-lsp**: These plugin provide the core functionality for autocompletion in Vim.
+- **vim-lsp/vim-lsp-settings**: These plugins simplify LSP configuration in Vim.
+- **asyncomplete.vim/asyncomplete-lsp**: These plugins provide the core functionality for autocompletion in Vim.
 
 Update your `~/.vimrc` file with the following changes:
 
@@ -121,9 +121,9 @@ After installing, restart vim or reload the file. You should now have auto-compl
 
 ### 5. What about languages like COBOL?
 
-Thanks to the zOpenEditor communnity efforts, COBOL has its own LSP. It's available at [https://github.com/eclipse-che4z/che-che4z-lsp-for-cobol](https://github.com/eclipse-che4z/che-che4z-lsp-for-cobol).
+Thanks to the IBM Z Open Editor communnity efforts, COBOL has its own language server implementation. It's available at [https://github.com/eclipse-che4z/che-che4z-lsp-for-cobol](https://github.com/eclipse-che4z/che-che4z-lsp-for-cobol).
 
-Before installing the COBOL LSP, you will need `unzip` and `java` in your path.
+Before installing the COBOL langauge server, you will need `unzip` and `java` in your path.
 
 Install unzip if you don't have it:
 ```
@@ -136,25 +136,25 @@ export PATH=/usr/lpp/java/IBM/J11.0_64/:$PATH
 
 ```
 
-- Now, open a COBOL file with Vim, with `.cbl` as the extension:
+Now, open a COBOL file with Vim, with `.cbl` as the extension:
 
 ```bash
 vim hello.cbl
 ```
 
-- Use the following command to install the COBOL language server:
+Use the following command to install the COBOL language server:
 
 ```vim
 :LspInstallServer
 ```
 
-Restart vim. You should see something like this
+Restart vim and edit the file again with `vim hello.cbl`. You should see something like this:
 
 <p style="text-align: center;">
 <img src="/blog/img/in-post/cobol_vim.gif" alt="python vim" style="float:center;">
 </p>
 
-As you'll notice, there's a few issues with indenting which will require additional investigation, but overall the autocomplete support seems to be working!
+As you'll notice, there's a few issues with indenting which will require additional investigation, but overall the autocomplete and diagnostics support seems to be working!
 
 **Next Steps**
 * Iron out the little quirks when editing with auto-complete support.
