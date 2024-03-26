@@ -25,6 +25,8 @@ Language Server Protocol (LSP) is a protocol that standardizes the communication
 Vim auto-complete with the COBOL LSP
 </p>
 
+LSPs use JSON-RPC to communicate between the development tool and the language server. This allows the server to be implemented in any language and simplifies the protocol itself. The protocol defines a set of language-neutral features that can be supported by the server, such as code completion and go-to-definition. The specific integration of a language server into a tool is left up to the tool developers. For more information on what languages implement language servers, check out this [page](https://microsoft.github.io/language-server-protocol/implementors/servers/).
+
 ## Why LSPs are handy for development
 
 LSP's enable code editors to support the following features withouth having to write their own Langauge parsers and analyzers:
