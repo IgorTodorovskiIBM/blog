@@ -13,9 +13,9 @@ tags:
     - Autocomplete
 ---
 
-As a long-time Vim user who develops directly on z/OS UNIX (you call me old school!), one feature that I've always craved is the support for **Language Server Protocols**.
+As a long-time Vim user who develops directly on z/OS UNIX (yes, call me old school!), one feature that I've always wanted is the support for **Language Server Protocols**.
 
-Language Server Protocol (LSP) is a protocol that standardizes the communication between editors and language servers. 
+If you're not aware of Language Servers and the Language Server Protocol (LSP), it's a protocol that standardizes the communication between editors and language servers. 
 
 [Microsoft's LSP website](https://microsoft.github.io/language-server-protocol/) summarizes it well:
 > The Language Server Protocol (LSP) defines the protocol used between an editor or IDE and a language server that provides language features like auto complete, go to definition, find all references etc. The goal of the Language Server Index Format (LSIF, pronounced like "else if") is to support rich code navigation in development tools or a Web UI without needing a local copy of the source code.
@@ -25,7 +25,8 @@ Language Server Protocol (LSP) is a protocol that standardizes the communication
 Vim auto-complete with the COBOL LSP
 </p>
 
-LSP uses JSON-RPC to communicate between the development tool and the language server. This allows the server to be implemented in any language. The protocol defines a set of language-neutral features that can be supported by the server, such as code completion and go-to-definition. The specific integration of a language server into a tool is left up to the tool developers. For more information on what languages implement language servers, check out this [page](https://microsoft.github.io/language-server-protocol/implementors/servers/).
+Language servers use JSON-RPC to communicate between the development tool and the language server. Using JSON-RPC allows the server to be implemented in any language. For example, the COBOL language server is written in Java and the Python language server is written in Python. 
+The protocol itself defines a set of features that can be supported by the server, such as code completion and go-to-definition. For more information on what languages implement language servers, check out this [page](https://microsoft.github.io/language-server-protocol/implementors/servers/).
 
 ## Why LSPs are handy for development
 
