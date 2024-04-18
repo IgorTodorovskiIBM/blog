@@ -4,7 +4,6 @@ title:        "Enhancing Vim on z/OS UNIX with Language Server Protocol (LSP) su
 author:       "Igor Todorovski"
 header-img:   "img/post-bg-vim.jpg"
 catalog:      true
-hidden:       true
 tags:
     - z/OS
     - Porting
