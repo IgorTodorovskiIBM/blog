@@ -122,34 +122,32 @@ After installing, restart vim or reload the file. You should now have auto-compl
 
 ### 5. Configuring LSP for Go 
 
-Now let's explore how to set up an language server for Go.
+Now let's explore how to set up the language server for Go.
 
-**Note**: The Go language server requires `go` in the ATH
-
+**Note**: The Go language server requires the `go` compiler in the PATH. Also make sure to disable CGO with `export CGO_ENABLED=0`.
 
 First, open a Go file with Vim. vim-lsp-settings associates LSPs with the language extension, so make sure the extension is `.go`.
 
 ```bash
-vim hello.go
+vim main.go
 ```
 
-Use the following command to install the Python language server (pyls).
+Use the following command to install the Go language server (gopls).
 
 ```vim
 :LspInstallServer
 ```
 
-After installing, restart vim or reload the file. You should now have auto-complete support via the Go language server
+After installing, restart vim or reload the file. You should now have auto-complete support via the Go language server.
 
 <p style="text-align: center;">
 <img src="/blog/img/in-post/vimgo.gif" alt="python vim" style="float:center;">
 </p>
 
 
-
 **Next Steps**
-* Iron out the little quirks when editing with auto-complete support.
+* Test out more languages!
 * Neovim! Port LuaJit so that we get all of the Neovim features enabled for z/OS!
 
 # Thank you
-Thanks for reading and thanks to Mike Fulton, Haritha D and the z/OS Open Tools contributors!
+Thanks for reading and thanks to Mike Fulton, Haritha D, Peter Haumer and the z/OS Open Tools contributors!
