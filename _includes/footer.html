@@ -311,4 +311,15 @@
             }
         });
     });
+
+    // Initialize FancyBox
+$(document).ready(function() {
+  // Select all links with the .fancybox class
+  $('[data-fancybox]').fancybox({
+    // Optional settings
+    loop: true,
+    buttons: ["zoom", "close"],
+    transitionEffect: "slide",
+  });
+});
 </script>
