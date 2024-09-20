@@ -12,7 +12,7 @@ tags:
 
 > Bash on z/OS
 
-As part of the [z/OS Open Tools](https://github.com/ZOSOpenTools) initiative, I, along with [Mike Fulton](https://makingdeveloperslivesbetter.wordpress.com), embarked on a journey to port Bash, the renowned shell and scripting language, to the z/OS platform. The motivation was simple: not having Bash on z/OS was a persistant pain point for me and others on z/OS. In this blog, I will discuss the technical challenges encountered while porting Bash to z/OS, and also discuss the steps taken to upstream the z/OS changes back to the Bash community.
+As part of the [z/OS Open Tools](https://github.com/zopencommunity) initiative, I, along with [Mike Fulton](https://makingdeveloperslivesbetter.wordpress.com), embarked on a journey to port Bash, the renowned shell and scripting language, to the z/OS platform. The motivation was simple: not having Bash on z/OS was a persistant pain point for me and others on z/OS. In this blog, I will discuss the technical challenges encountered while porting Bash to z/OS, and also discuss the steps taken to upstream the z/OS changes back to the Bash community.
 
 ![image](https://upload.wikimedia.org/wikipedia/commons/8/82/Gnu-bash-logo.svg)
 
@@ -49,7 +49,7 @@ As seen here, netstat is an external link:
 ```
 erwxrwxrwx   1 ROOT     1              8 Nov 11  2021 ping -> OPING
 ```
-We addressed this issue in this [PR](https://github.com/ZOSOpenTools/bashport/pull/53)
+We addressed this issue in this [PR](https://github.com/zopencommunity/bashport/pull/53)
 
 ```bash
 $ ping www.ibm.com
@@ -68,7 +68,7 @@ cat <(date)
 (garbled output)
 ```
 
-After applying the fix in [PR](https://github.com/ZOSOpenTools/bashport/pull/60/files), it worked:
+After applying the fix in [PR](https://github.com/zopencommunity/bashport/pull/60/files), it worked:
 ```bash
 cat <(date)
 Fri May 24 11:34:28 CDT 2023
@@ -102,7 +102,7 @@ After some research, I identified the official Bash community, hosted on [Savann
 z/OS.
 
 > We have a few patches here which I will be cleaning up for the next few days: 
-https://github.com/ZOSOpenTools/bashport/tree/main/patches
+https://github.com/zopencommunity/bashport/tree/main/patches
 
 > Is it enough to just provide this patch location once they’re cleaned up? I 
 confirmed that they apply to the master branch.
@@ -111,7 +111,7 @@ confirmed that they apply to the master branch.
 
 > Also, on z/OS we have a prefix message id before the error text as in this 
 case: 
-https://github.com/ZOSOpenTools/bashport/blob/main/patches/PR3/builtins.right.patch
+https://github.com/zopencommunity/bashport/blob/main/patches/PR3/builtins.right.patch
 
 > Is there a preferred approach for how to handle this? Should I create a 
 builtins.right.zos?
@@ -121,10 +121,10 @@ Igor
 
 
 ## Step 2: Building the latest development branch of Bash on z/OS
-The next step was to integrate and clean up our changes so that we could build the development branch of Bash on z/OS. This was done as part of [this PR](https://github.com/ZOSOpenTools/bashport/pull/62).
+The next step was to integrate and clean up our changes so that we could build the development branch of Bash on z/OS. This was done as part of [this PR](https://github.com/zopencommunity/bashport/pull/62).
 
 ## Step 3: Seeking feedback on z/OS changes
-After building the development branch of Bash on z/OS, I continued to engage with Chet Ramey, the maintainer of GNU Bash and provided a link to our working [github branch](https://github.com/ZOSOpenTools/bashport/tree/enable_git). He provided great feedback and was able to simplify and adapt many of my changes!
+After building the development branch of Bash on z/OS, I continued to engage with Chet Ramey, the maintainer of GNU Bash and provided a link to our working [github branch](https://github.com/zopencommunity/bashport/tree/enable_git). He provided great feedback and was able to simplify and adapt many of my changes!
 
 ## Step 4: Iterative refinement
 Guided by Chet's expert feedback, I refined the patches iteratively to align with the standards and best practices of the Bash community.

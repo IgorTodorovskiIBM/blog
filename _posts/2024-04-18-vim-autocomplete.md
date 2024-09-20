@@ -45,7 +45,7 @@ So in the meantime, I'm going to describe how we can provide LSP support to Vim 
 
 ### 1. Installing Vim
 
-Begin by installing or updating Vim on your system using the [zopen package manager](https://github.com/ZOSOpenTools/meta):
+Begin by installing or updating Vim on your system using the [zopen package manager](https://github.com/zopencommunity/meta):
 
 ```bash
 zopen install vim
