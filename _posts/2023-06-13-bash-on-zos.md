@@ -12,7 +12,7 @@ tags:
 
 > Bash on z/OS
 
-As part of the [z/OS Open Tools](https://github.com/zopencommunity) initiative, I, along with [Mike Fulton](https://makingdeveloperslivesbetter.wordpress.com), embarked on a journey to port Bash, the renowned shell and scripting language, to the z/OS platform. The motivation was simple: not having Bash on z/OS was a persistant pain point for me and others on z/OS. In this blog, I will discuss the technical challenges encountered while porting Bash to z/OS, and also discuss the steps taken to upstream the z/OS changes back to the Bash community.
+As part of the [zopen community](https://github.com/zopencommunity) initiative, I, along with [Mike Fulton](https://makingdeveloperslivesbetter.wordpress.com), embarked on a journey to port Bash, the renowned shell and scripting language, to the z/OS platform. The motivation was simple: not having Bash on z/OS was a persistant pain point for me and others on z/OS. In this blog, I will discuss the technical challenges encountered while porting Bash to z/OS, and also discuss the steps taken to upstream the z/OS changes back to the Bash community.
 
 ![image](https://upload.wikimedia.org/wikipedia/commons/8/82/Gnu-bash-logo.svg)
 

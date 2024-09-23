@@ -13,7 +13,7 @@ tags:
 
 > Ever tried porting your favorite Linux tool to z/OS? As we'll see, it's not as simple as grabbing the source and building it on z/OS!
 
-My role at [z/OS Open Tools](https://github.com/zopencommunity) involves the task of porting open-source tools to the [IBM z/OS operating system](https://www.ibm.com/products/zos). This requires navigating through the various differences between Linux and z/OS, such as:
+My role at the [zopen community](https://github.com/zopencommunity) involves the task of porting open-source tools to the [IBM z/OS operating system](https://www.ibm.com/products/zos). This requires navigating through the various differences between Linux and z/OS, such as:
 * C runtime differences ([GNU C Library (Glibc)](https://www.gnu.org/software/libc/) vs [z/OS C Runtime Library](https://www.ibm.com/docs/en/zos/3.1.0?topic=cc-zos-runtime-library-reference))
 * File system differences (z/OS UNIX/datasets on z/OS)
 * Endianness differences
@@ -39,7 +39,7 @@ At its core, [ZOSLIB](https://github.com/ibmruntimes/zoslib) is an open source e
 * **Data Conversion Utilities**: C APIs for EBCDIC to ASCII conversions and vice versa simplify the handling of different character encodings.
 * **Diagnostic Reporting**: ZOSLIB provides APIs for enhanced diagnostic reporting, aiding in troubleshooting.
 
-ZOSLIB was originally introduced as a library to aid in porting Node.js and its components to z/OS. It has since been open-sourced and is now used by over 100 open-source projects under the z/OS Open Tools organization.
+ZOSLIB was originally introduced as a library to aid in porting Node.js and its components to z/OS. It has since been open-sourced and is now used by over 100 open-source projects under the zopen community organization.
 
 The ZOSLIB project is available on GitHub at [https://github.com/ibmruntimes/zoslib](https://github.com/ibmruntimes/zoslib). It is licensed under the Apache 2.0 license, which imposes few restrictions and facilitates modification and redistribution.
 
@@ -82,15 +82,15 @@ These are just a few examples of what ZOSLIB has to offer and I encourage to rea
 
 Now that we've examined what ZOSLIB has to offer, let's explore how you can seamlessly integrate ZOSLIB into your application or library.
 
-To leverage ZOSLIB, you can either compile it from source as described in the [README](https://github.com/ibmruntimes/zoslib) or you can download a release from the z/OS Open Tools [zoslibport repository](https://github.com/zopencommunity/zoslibport/releases).
+To leverage ZOSLIB, you can either compile it from source as described in the [README](https://github.com/ibmruntimes/zoslib) or you can download a release from the zopen [zoslibport repository](https://github.com/zopencommunity/zoslibport/releases).
 
 This release provides the libraries (static and dynamic), header files, man pages, as well as environment variables for use in the zopen framework.
 
-We'll first cover how to integrate zoslib into your code manually, and then describe how we're automatically integrating zoslib into the 100+ z/OS Open Tools projects.
+We'll first cover how to integrate zoslib into your code manually, and then describe how we're automatically integrating zoslib into the 100+ zopen community projects.
 
 ## Integrating zoslib manually
 
-First, download a stable release of zoslib [here](https://github.com/zopencommunity/zoslibport/releases). If you have the z/OS Open Tools package manager, `zopen`, on your system (details [here](https://zosopentools.github.io/meta/#/Guides/QuickStart)), you can simply run:
+First, download a stable release of zoslib [here](https://github.com/zopencommunity/zoslibport/releases). If you have the zopen package manager, `zopen`, on your system (details [here](https://zopencommunity.github.io/meta/#/Guides/QuickStart)), you can simply run:
 ```
 zopen install zoslib
 ```
@@ -156,9 +156,9 @@ t ISO8859-1   T=on  -rw-rw-r--   1 ITODORO  CDEV          14 Feb 12 14:52 output
 
 As you can see, the output.txt file is now tagged as ISO8859-1. This is because `open()` is now overriden with `__open_ascii()` from zoslib as instructed by the macro `-DZOSLIB_OVERRIDE_CLIB=1`.
 
-Now let's examine a simpler way of integrating ZOSLIB, and that is by leveraging the z/OS Open Tools framework. This is how zoslib is currently being leveraged in over 100+ z/OS Open Tools projects.
+Now let's examine a simpler way of integrating ZOSLIB, and that is by leveraging the zopen framework. This is how zoslib is currently being leveraged in over 100+ zopen projects.
 
-## Leveraging the z/OS Open Tools Build Framework
+## Leveraging the zopen build framework
 
 Examine the following code snippet:
 ```
@@ -177,7 +177,7 @@ The `zopen` build framework sets the CPPFLAGS, CXXFLAGS, CFLAGS, LIBS, LDFLAGS a
 
 Since late 2022, several z/OS ported projects, including Git, Curl, Bash and many more have been successfully integrated with zoslib. Open Source communities have also adopted our dependency on zoslib, including GNU Make, Bash, Vim and more!
 
-If you're interested in porting to z/OS Open Tools and would like to learn how, check out our documentation [here](https://zosopentools.github.io/meta/#/Guides/Porting).
+If you're interested in porting to zopen and would like to learn how, check out our documentation [here](https://zopencommunity.github.io/meta/#/Guides/Porting).
 
 ## Contributing to ZOSLIB
 

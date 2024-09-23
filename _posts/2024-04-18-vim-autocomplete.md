@@ -149,4 +149,4 @@ After installing, restart vim or reload the file. You should now have auto-compl
 * Neovim! Port LuaJit so that we get all of the Neovim features enabled for z/OS!
 
 # Thank you
-Thanks for reading and thanks to Mike Fulton, Haritha D, Peter Haumer and the z/OS Open Tools contributors!
+Thanks for reading and thanks to Mike Fulton, Haritha D, Peter Haumer and the zopen community contributors!

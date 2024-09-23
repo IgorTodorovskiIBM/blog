@@ -13,7 +13,7 @@ Mainframe Demystified is not just a blog; it's a community. I actively engage wi
 Thank you for being a part of Mainframe Demystified, and I look forward to the enlightening journey ahead!
 
 ##### Links
-- [z/OS Open Tools project](https://github.com/ZOSOpenTools).
+- [zopen community](https://github.com/zopencommunity).
 
 ##### Articles
 
