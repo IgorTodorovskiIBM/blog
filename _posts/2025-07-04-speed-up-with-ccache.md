@@ -24,28 +24,9 @@ The beauty of `ccache` is its simplicity. It acts as a "wrapper" that intercepts
 
 This diagram illustrates the workflow:
 
-```mermaid
-sequenceDiagram
-    participant Dev as Developer
-    participant Build as Build Process (make/zopen build)
-    participant Ccache
-    participant Clang as IBM Open XL clang
 
-    Dev->>+Build: Run build command
-    Build->>+Ccache: Invoke 'ccache clang -c file.c -o file.o'
-    Ccache->>Ccache: Hash (preprocessed file.c + options)
-    
-    alt Cache Hit (Hash Found)
-        Ccache-->>Build: Return 'file.o' directly from cache
-    else Cache Miss (Hash Not Found)
-        Ccache->>+Clang: Invoke real 'clang -c file.c -o file.o'
-        Clang-->>-Ccache: Return new 'file.o'
-        Ccache->>Ccache: Store new 'file.o' in cache
-        Ccache-->>Build: Return new 'file.o'
-    end
-    
-    Build-->>-Dev: Build finished
-```
+![image](/blog/img/in-post/ccache.png)
+
 
 **The Process**
 
@@ -98,7 +79,7 @@ While the manual methods are great, I wanted to test `ccache` in a fully integra
 
 My first step was to clone the `bashport` repository from the zopen community.
 ```bash
-git clone [https://github.com/zopencommunity/bashport.git](https://github.com/zopencommunity/bashport.git)
+git clone https://github.com/zopencommunity/bashport.git1G
 cd bashport
 ```
 
