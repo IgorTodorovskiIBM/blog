@@ -13,23 +13,17 @@ tags:
     - zopen
 ---
 
-As a developer in the [zopen community](https://zopen.community/) (a z/OS Open Source Community), I've lost what feels like countless hours waiting for builds to finish. The build-time bottleneck becomes especially painful in an automated CI/CD pipeline, where I'm waiting on a critical fix to be built, verified, and deployed. I personally don't enjoy waiting around, nor do our users, so this drove me to find a better way, and my search led me to `ccache`, a tool that caches compiler output to speed up rebuilds. The caching approach had me intrigued, so I decided to port ccache to z/OS and integrate it into the zopen community to see if it can help!
+As a developer in the [zopen community](https://zopen.community/) (a z/OS Open Source Community), I've lost what feels like countless hours waiting for builds to finish. The build-time bottleneck becomes especially painful in an automated CI/CD pipeline, where I'm waiting on a critical fix to be built, verified, and deployed. I personally don't enjoy waiting around, nor do our users, so this drove me to find a better way, and my search led me to `ccache`, a tool that caches compiler output to speed up rebuilds. The caching approach had me intrigued, so I decided to [port ccache](https://github.com/zopencommunity/ccacheport) to z/OS and integrate it into the zopen community to see if it can help!
 
-In this blog, we’ll cover the basics of ccache, how to get it running on z/OS, how to use it effectively, and most importantly, how it can cut your build times in half.
+In this blog, we’ll cover the basics of ccache, how to get it running on z/OS, how to use it effectively, and most importantly, how it can **cut your build times by up to 95%**!
 
 ### What is `ccache` and Why Should I Care?
 
-`ccache` is a compiler cache. Its function is to speed up recompilation by caching the results of previous compilations. When rebuilding software, `ccache` can provide these cached outputs instead of re-running the compiler, which reduces build time. This should result in a much faster build turnaround-time.
+`ccache` is a compiler cache. Its function is to speed up recompilation by caching the results of previous compilations. When rebuilding software, `ccache` can provide these cached outputs instead of re-running the compiler. This should result in a much faster build turnaround-time.
 
 ### How `ccache` Works 
 
 The beauty of `ccache` is its simplicity. It acts as a "wrapper" that intercepts calls to your real compiler (in my case, **IBM Open XL C/C++'s clang compiler**). It then quickly determines if it has a valid, cached result (usually a compiled object) from a previous identical compilation.
-
-This diagram demonstrates the workflow:
-
-
-![image](/blog/img/in-post/ccache.png)
-
 
 **The Process**
 
@@ -39,11 +33,11 @@ This diagram demonstrates the workflow:
 
 For more in-depth details, visit the official `ccache` website: **[https://ccache.dev](https://ccache.dev)**
 
-### Using `ccache` on z/OS: From Simple to Integrated
+### Using `ccache` on z/OS
 
 #### 1. Installing `ccache`
 
-Begin by installing or updating Vim on your system using the [zopen package manager](https://github.com/zopencommunity/meta):
+Begin by installing or updating `ccache` on your system using the [zopen package manager](https://github.com/zopencommunity/meta):
 
 ```bash
 zopen install ccache 
@@ -120,8 +114,6 @@ This nearly 9-minute full-build time, and more specifically the 237-second build
 
 Next, I removed the build artifacts to simulate a clean workspace and ran the build again, this time adding the `--ccache` flag. Before this step, it's important to have the necessary tools. 
 
-This experiment requires `ccache`, which you can install via `zopen install ccache`. You also need a supported compiler. I used the `clang` compiler provided by **IBM Open XL C/C++**.
-
 ```bash
 rm -rf bash-* # remove the bash source/build directory
 time zopen build -vv --ccache
@@ -147,7 +139,7 @@ time zopen build -vv --ccache
 
 The results were great! The total time dropped from **8m43s** to **4m2s**. That's a **54% reduction (more than 2x faster)** in the total time I had to wait!
 
-The framework's build timer tells an better story: the core build phase, which was **237 seconds** in the baseline, dropped to just **12 seconds**. This shows that with a warm cache, the time-consuming compilation step was almost entirely eliminated, leaving only the much faster linking step within the build phase. While the configure and install phases took a similar amount of time in each run, the massive speedup in the build phase is what drove this incredible overall improvement.
+The framework's build timer tells an better story: the core build phase, which was **237 seconds** in the baseline, dropped to just **12 seconds** - a reduction of **95%**! This shows that with a warm cache, the time-consuming compilation step was almost entirely eliminated, leaving only the much faster linking step within the build phase. While the configure and install phases took a similar amount of time in each run, the massive speedup in the build phase is what drove this incredible overall improvement.
 
 ### Managing and Monitoring Your Cache
 
@@ -173,5 +165,5 @@ While ccache delivers clear performance gains for C/C++ with modern compilers li
 This raises important questions:
 
 * Should we explore caching strategies for legacy languages on z/OS?
-* What impact could this have on build speed, especially in large enterprise pipelines?
+* What impact could this have on build speed, especially in integrated CI/CD pipelines? 
 
