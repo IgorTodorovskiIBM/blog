@@ -1,7 +1,7 @@
 ---
 layout:         post
 title:          "Faster builds on z/OS with ccache"
-author:         "A z/OS Open Source Developer"
+author:         "Igor Todorovski"
 header-img:     "img/in-post/ccache.png"
 hidden:         true
 catalog:        true
