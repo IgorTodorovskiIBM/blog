@@ -1,6 +1,6 @@
 ---
 layout:         post
-title:          "My Journey Porting ccache to z/OS for Faster Builds"
+title:          "Faster builds on z/OS with ccache"
 author:         "A z/OS Open Source Developer"
 header-img:     "img/in-post/ccache.png"
 hidden:         true
