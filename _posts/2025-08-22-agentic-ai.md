@@ -18,7 +18,14 @@ tags:
 As a developer in the [zopen community](https://zopen.community/), I’m always looking for ways to streamline my workflow on z/OS. With agentic AI now at the forefront, I was extremely curious if I could "agentify" parts of my workflow. 
 As an experiment, I wanted to see if I could use agentic AI to control `zopen` with natural language. For example, what if you could simply ask your terminal: **"Show me all the installed zopen packages,"** or **"Install git and less for me,"** and it would invoke the zopen tools to perform those operations in a secure way. Thanks to LLM models and the MCP protocol, this is no longer a pipe dream! 
 
+
 As of this writing, the tools to build a powerful AI assistant for z/OS are here! And thanks to the technologies I will cover today, you now have the flexibility to run the LLMs either on your local workstation or **directly on z/OS itself**.
+
+Our custom zopen MCP Server, which translates AI requests into real commands.
+
+Ollama running the powerful Qwen2 language model directly on my machine.
+
+Crush from Charmbracelet, a terminal-native AI agent that ties everything together.
 
 In this blog, we'll cover the flexible architecture that makes this possible, using our custom `zopen` MCP Server, an AI model served by Ollama or llama.cpp, and the Crush terminal agent from Charmbracelet.
 
@@ -153,3 +160,10 @@ With your `crush.json` file in place, simply run `crush` in your z/OS terminal. 
 > ...
 > 
 > CODEBLOCK
+
+# Next Steps: An AI Assistant for Porting Apps
+While managing packages is a great first step, the true power of this architecture is in automating complex, knowledge-intensive tasks. My next goal is to tackle one of the most time-consuming parts of my workflow: porting new open-source applications to z/OS.
+
+This process often begins by creating a meta.json file, a task that requires careful analysis of a project's build system. To automate this, I'm developing a new zopen_generate tool for the MCP server.
+
+Unlike the other tools, this one won't just wrap a command. It will use our local LLM to generate code. When I ask Crush to "analyze this Makefile and generate a zopen meta.json file," the zopen_generate tool will be called. Inside the tool, it will construct a specialized prompt, send it to our local Ollama model, and return the generated meta.json file.
