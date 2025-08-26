@@ -51,17 +51,17 @@ For simplicity, I am going to install the LLM on my Mac using Ollama.
 
 If you use Homebrew, you can install it via the command line.
 
-CODEBLOCK BASH
+```bash
 brew install ollama
-CODEBLOCK
+```
 
 We're going to use qwen3, because it has an 8b parameter model which is not too resource heavy. 
 
 In your terminal, run the following command to get the `qwen3:8b` model:
 
-CODEBLOCK BASH
+```bash
 ollama run qwen3:8b
-CODEBLOCK
+```
 
 Now leave the Ollama application running in the background on your workstation.
 
@@ -84,9 +84,9 @@ When running this server on z/OS, it no longer needs SSH details, as it can exec
 
 Crush is the AI agent that will live in your terminal. As of today, **Crush can be installed and run directly on z/OS** via zopen.
 
-CODEBLOCK BASH
+```bash
 zopen install crush
-CODEBLOCK
+```
 
 ### Configuring Crush: The `crush.json` File
 
@@ -96,7 +96,7 @@ The `crush.json` file tells Crush how to connect all the pieces. The configurati
 
 In this setup, Crush runs on z/OS, talks to your `zopen` server on z/OS, but gets its intelligence from the Ollama server running back on your workstation.
 
-CODEBLOCK JSON
+```json
 {
   "$schema": "https://charm.land/crush.json",
   "providers": {
@@ -116,13 +116,13 @@ CODEBLOCK JSON
   },
   "permissions": { "allowed_tools": ["mcp_zopen_zopen_list", "..."] }
 }
-CODEBLOCK
+```
 
 #### Configuration for Everything on z/OS
 
 Here, Crush, the `zopen` server, and the `llama.cpp` server all run on z/OS.
 
-CODEBLOCK JSON
+```json
 {
   "$schema": "https://charm.land/crush.json",
   "providers": {
@@ -142,7 +142,7 @@ CODEBLOCK JSON
   },
   "permissions": { "allowed_tools": ["mcp_zopen_zopen_list", "..."] }
 }
-CODEBLOCK
+```
 
 ### The Result: An AI-Powered z/OS Workflow!
 
@@ -152,14 +152,14 @@ With your `crush.json` file in place, simply run `crush` in your z/OS terminal. 
 >
 > **Crush:** *(finds the `mcp_zopen_zopen_list` tool and runs it)*
 >
-> CODEBLOCK
+> ```
 > ✅ Command successful: zopen list
 > 
 > Package      Version
 > zopen-build  2.0.0
 > ...
 > 
-> CODEBLOCK
+> ```
 
 # Next Steps: An AI Assistant for Porting Apps
 While managing packages is a great first step, the true power of this architecture is in automating complex, knowledge-intensive tasks. My next goal is to tackle one of the most time-consuming parts of my workflow: porting new open-source applications to z/OS.
