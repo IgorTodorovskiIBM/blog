@@ -21,9 +21,13 @@ Imagine being able to use natural language to automate tasks with familiar tools
 
 Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), this is now possible on z/OS!  
 
-<a href="/blog/img/in-post/crush_zopen.gif" class="fancybox" data-fancybox>
-  <img src="/blog/img/in-post/crush_zopen.gif" alt="Crush" title="Crush Image">
-</a>  
+<div style="text-align: center;">
+
+  <a href="/blog/img/in-post/crush_zopen.gif" class="fancybox" data-fancybox>
+    <img src="/blog/img/in-post/crush_zopen.gif" alt="Crush" title="Crush Image" style="display: block; margin: 0 auto;">
+    Agentic AI running directly on z/OS!
+  </a>
+</div>
 
 To make this work, we combine several key technologies:  
 
