@@ -95,6 +95,23 @@ To install the server on z/OS, you can use `go install`:
 go install github.com/IgorTodorovskiIBM/zopen-mcp-server@v1.0.0
 ```
 
+#### Available Tools in the zopen MCP server
+
+The `zopen-mcp-server` now supports the following commands:
+
+- `zopen_list`: Lists information about zopen community packages.
+- `zopen_query`: Lists local or remote info about zopen community packages.
+- `zopen_install`: Installs one or more zopen community packages.
+- `zopen_remove`: Removes installed zopen community packages.
+- `zopen_upgrade`: Upgrades existing zopen community packages.
+- `zopen_info`: Displays detailed information about a package.
+- `zopen_version`: Displays the installed zopen version.
+- `zopen_init`: Initializes the zopen environment.
+- `zopen_clean`: Removes unused resources.
+- `zopen_alt`: Switches between different versions of a package.
+
+You can also run it remotely if you choose to run crush on your workstation.
+
 ## Step 3: Crush, Your Terminal Agent - Now on z/OS!
 
 Crush is an AI agent that runs directly in your z/OS terminal.  
@@ -168,7 +185,6 @@ From here, you can start giving it tasks to automate!
     margin: 0;            /* remove default margins */
     padding: 0;           /* remove any padding */
   }
-
   .fancybox img {
     display: block;       /* prevents inline spacing */
     margin: 0;            /* remove image margins */
@@ -186,27 +202,17 @@ From here, you can start giving it tasks to automate!
   <img src="/blog/img/in-post/crush3.png" alt="Crush" title="Crush Image">
 </a>
 
-As you can see, Crush already supports many tools, including `git` and `view`, which allow it to clone repositories and read their contents. It also leverages our `zopen-mcp-server` to extend its capabilities.  
+As you can see, Crush already supports many tools, including `git` and `view`, which allow it to clone repositories and inspect their contents. It also leverages our `zopen-mcp-server` to check package availability on z/OS.  
 
-In this example, it was even able to summarize the build dependencies by inspecting the `INSTALL` script.  
+In this example, Crush cloned the Git repository, inspected the `INSTALL` file, and produced a dependency analysis:  
 
-Pretty awesome!
+- **Core dependencies found in zopen**: `zlib`, `bash`, `Perl`, `libcurl`, `gettext`, `python`.  
+- **Optional dependencies missing or partially available**: `expat`, `openssl`, `tcl/tk`, `xmlto`.  
+- **Documentation tools not explicitly packaged in zopen**: `asciidoc`, `makeinfo`, `docbook2X`, `dblatex`, `docbook-xsl`.  
 
+Crush was able to summarize this automatically, saving the manual effort of digging through build scripts.  
 
-### Available Tools in the zopen MCP server
-
-The `zopen-mcp-server` now supports the following commands:
-
-- `zopen_list`: Lists information about zopen community packages.
-- `zopen_query`: Lists local or remote info about zopen community packages.
-- `zopen_install`: Installs one or more zopen community packages.
-- `zopen_remove`: Removes installed zopen community packages.
-- `zopen_upgrade`: Upgrades existing zopen community packages.
-- `zopen_info`: Displays detailed information about a package.
-- `zopen_version`: Displays the installed zopen version.
-- `zopen_init`: Initializes the zopen environment.
-- `zopen_clean`: Removes unused resources.
-- `zopen_alt`: Switches between different versions of a package.
+Pretty awesome! 
 
 # Next Steps: An AI Assistant for Porting Apps
 While package management is a great first step, the real power of agentic AI lies in automating complex, knowledge-intensive tasks. My next goal is to tackle one of the most time-consuming parts of my workflow: **porting new open-source applications to z/OS**.  
