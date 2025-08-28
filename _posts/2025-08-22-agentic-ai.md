@@ -15,21 +15,22 @@ tags:
     - Ollama
 ---
 
-As a developer in the [zopen community](https://zopen.community/), I’m always looking for ways to streamline my workflow on z/OS. With the rise of agentic AI, I was curious to see if I could "agentify" my z/OS workflow. 
+As a developer in the [zopen community](https://zopen.community/), I’m always looking for ways to streamline my workflow on z/OS. With the rise of agentic AI, I started wondering if I could “agentify” my z/OS workflow.  
 
-For example, what if I could use natural language to ask an AI to **"Show me all of the installed zopen packages"** or **"Install everything I need for web development"**? 
+Imagine being able to use natural language to automate tasks with familiar tools. For example, what if I could simply ask: **“Show me all of the installed zopen packages”** or **“Install everything I need for web development”**, and have the AI use the zopen package manager to carry it out?
 
-Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), we'll show how this is now possible on z/OS!
+Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), this is now possible on z/OS!  
 
 <a href="/blog/img/in-post/crush_zopen.gif" class="fancybox" data-fancybox>
-  <img src="/blog/img/in-post/crush_zopen.gif" alt="Crush" title="Perfetto Image">
-</a>
+  <img src="/blog/img/in-post/crush_zopen.gif" alt="Crush" title="Crush Image">
+</a>  
 
-We will leverage the following technologies to make this happen:
+To make this work, we combine several key technologies:  
 
-* Our custom zopen MCP Server, which translates AI requests into real commands.
-* Ollama or LLamacpp running the an open-source language model directly on your workstation or on z/OS.
-* [Crush](https://github.com/charmbracelet/crush), a terminal-native AI agent that ties everything together.
+* A custom zopen MCP Server that translates AI requests into real commands.  
+* Ollama or LLama.cpp, running an open-source language model directly on your workstation or on z/OS.  
+* [Crush](https://github.com/charmbracelet/crush), a terminal-native AI agent that ties everything together.  
+
 
 ### What is MCP 
 
@@ -137,6 +138,25 @@ In this setup, Crush runs on z/OS, talks to your `zopen` server on z/OS, but get
 
 With your `crush.json` file in place, simply run `crush` in your z/OS terminal. Crush starts, connects to your chosen model server, and automatically launches your `zopen-mcp-server` in the background.
 
+Let's now ask it a question.
+
+> Can you clone the git repo https://github.com/git/git (with a depth of 1) and discover the build dependencies that are needed to build it. Check if zopen has these build dependencies present
+
+<a href="/blog/img/in-post/crush1.png" class="fancybox" data-fancybox>
+  <img src="/blog/img/in-post/crush1.png" alt="Crush" title="Crush Image">
+</a>  
+<a href="/blog/img/in-post/crush2.png" class="fancybox" data-fancybox>
+  <img src="/blog/img/in-post/crush2.png" alt="Crush" title="Crush Image">
+</a>  
+<a href="/blog/img/in-post/crush3.png" class="fancybox" data-fancybox>
+  <img src="/blog/img/in-post/crush3.png" alt="Crush" title="Crush Image">
+</a>  
+
+As you can see, crush already has support for many tools including git and view to be able to clone and read content. It's also using our zopen mcp server.
+
+It was able to nicely summarize the build depepdencies by inspecting the INSTALL script.
+
+Pretty awesome!
 
 ### Available Tools in the zopen MCP server
 
