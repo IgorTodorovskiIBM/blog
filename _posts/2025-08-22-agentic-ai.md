@@ -162,6 +162,20 @@ From here, you can start giving it tasks to automate!
 
 > Can you clone the git repo https://github.com/git/git (with a depth of 1) and discover the build dependencies needed to compile it? Check if zopen already has these dependencies available.  
 
+<style>
+  .fancybox {
+    display: block;       /* make each anchor fill full width */
+    margin: 0;            /* remove default margins */
+    padding: 0;           /* remove any padding */
+  }
+
+  .fancybox img {
+    display: block;       /* prevents inline spacing */
+    margin: 0;            /* remove image margins */
+    padding: 0;           /* remove image padding */
+  }
+</style>
+
 <a href="/blog/img/in-post/crush1.png" class="fancybox" data-fancybox>
   <img src="/blog/img/in-post/crush1.png" alt="Crush" title="Crush Image">
 </a>
