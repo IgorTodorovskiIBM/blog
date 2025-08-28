@@ -17,7 +17,7 @@ tags:
 
 As a developer in the [zopen community](https://zopen.community/), I’m always looking for ways to streamline my workflow on z/OS. With the rise of agentic AI, I started wondering if I could “agentify” my z/OS workflow.  
 
-Imagine being able to use natural language to automate tasks with familiar tools. For example, what if I could simply ask: **“Show me all of the installed zopen packages that are outdated”** or **“Install everything I need for web development”**, and have the AI use the zopen package manager to carry out the task?
+Imagine being able to use natural language to automate tasks with familiar tools. For example, what if I could simply ask: **“Show me all of the installed zopen packages that need updating”** or **“Install everything I need for web development”**, and have the AI use its knowledge + the zopen package manager to carry out the task?
 
 Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), this is now possible on z/OS!  
 
@@ -27,9 +27,9 @@ Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), thi
 
 To make this work, we combine several key technologies:  
 
-* A custom zopen MCP Server that translates AI requests into real commands.  
+* A custom [zopen MCP Server](https://github.com/IgorTodorovskiIBM/zopen-mcp-server) that translates AI requests into real commands.  
 * Ollama or LLama.cpp, running an open-source language model directly on your workstation or on z/OS.  
-* [Crush](https://github.com/charmbracelet/crush), a terminal-native AI agent that ties everything together.  
+* [Crush](https://github.com/charmbracelet/crush), an open-source terminal-native AI agent that ties everything together.  
 
 
 ### What is MCP 
@@ -42,7 +42,7 @@ The design of MCP is heavily inspired by the success of the **Language Server Pr
 
 Before we begin, you'll need the following:
 
-- Go 1.23 or later. For z/OS, you can get Go from the [IBM Open Enterprise SDK for Go](https://www.ibm.com/products/open-enterprise-sdk-go-zos).
+- Go 1.23 or later. For z/OS, you can get Go from the [IBM Open Enterprise SDK for Go product page](https://www.ibm.com/products/open-enterprise-sdk-go-zos).
 - An environment with `zopen` installed (either locally or on a remote z/OS system). Use these [instructions](https://zopen.community/#/Guides/QuickStart) if you don't have zopen installed.
 
 ### Step 1: Choose Your Language Model
@@ -51,7 +51,7 @@ The core of our agent is the Large Language Model. You can leverage a any LLM, b
 
 **Option A (Recommended): Run the Model remotely (in my case my Workstation) with Ollama**
 
-For the best performance and responsiveness, running the LLM on a local workstation is the ideal choice as long as you have a GPU or Mac M series.
+For the best performance and responsiveness, running the LLM on a local workstation is the ideal choice as long as you have a GPU or Mac M series. Choosing the right model is important and will impact how well the automation workflow behaves.
 
 For simplicity, I am going to install the LLM on my Mac using Ollama.
 
@@ -61,7 +61,7 @@ If you use Homebrew, you can install it via the command line.
 brew install ollama
 ```
 
-I'm going to use qwen3, because it has an 8b parameter model which is not too resource heavy and it does well at coding tasks.
+I'm going to use Qwen3, because it's a fairly lightweight model (8b parameter model) it does well at most coding tasks. If you have enough VRAM, then I would suggest [Qwen-3-Coder](https://huggingface.co/Qwen/Qwen3-Coder-480B-A35B-Instruct).
 
 In your terminal, run the following command to get the `qwen3:8b` model:
 
@@ -78,7 +78,7 @@ Now leave the Ollama application running in the background on your workstation.
 For a fully self-contained solution, you can now run a model server directly on z/OS. Follow my [previous blog](https://igortodorovskiibm.github.io/blog/2023/08/22/llama-cpp/) on how to set that up.
 One reason for running LLaMa.cpp locally on z/OS is security. Data on z/OS machines is typically sensitive, and as such, many clients choose to air-gap their systems. (Air-gapping isolates a computer or network from external connections). For sensitive industries like finance and healthcare, local AI models are critical for security by limiting exposure to external threats.
 
-### Step 2: The `zopen` MCP Server - Our Custom Tool Bridge
+### Step 2: The zopen MCP Server - Our Custom Tool Bridge
 
 This is the component we built ourselves. The `zopen-mcp-server` is a Go application that acts as a translator. It listens for MCP requests from our AI agent (Crush) and converts them into `zopen` commands. We use the official [go mcp sdk](https://github.com/modelcontextprotocol/go-sdk) to create the MCP server. Its core components are:
 
@@ -110,7 +110,7 @@ The `zopen-mcp-server` now supports the following commands:
 - `zopen_clean`: Removes unused resources.
 - `zopen_alt`: Switches between different versions of a package.
 
-You can also run it remotely if you choose to run crush on your workstation.
+You can also run it remotely if you choose to run your Crush AI agent on your workstation.
 
 ## Step 3: Crush, Your Terminal Agent - Now on z/OS!
 
@@ -220,5 +220,4 @@ While package management is a great first step, the real power of agentic AI lie
 Agentic AI can also assist with debugging issues during the porting process—and much more. Exciting times ahead!
 
 Thank you to Mike Fulton and Andrew Sica for reviewing this post and providing valuable feedback!  
-
 
