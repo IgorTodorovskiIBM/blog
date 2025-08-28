@@ -1,6 +1,6 @@
 ---
 layout:         post
-title:          "An AI Workflow for z/OS: Integrating a Tool Server with Crush"
+title:          "I’ve Got a Crush on AI: Building Smarter Workflows for z/OS”
 author:         "Igor Todorovski"
 header-img:     "img/in-post/zos_ai_workflow.png"
 catalog:        true
