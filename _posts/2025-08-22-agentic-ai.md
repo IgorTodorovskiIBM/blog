@@ -17,15 +17,19 @@ tags:
 
 As a developer in the [zopen community](https://zopen.community/), I’m always looking for ways to streamline my workflow on z/OS. With the rise of agentic AI, I was curious to see if I could "agentify" my z/OS workflow. 
 
-For example, what if I could use natural language to ask an AI to **"Show me all of the installed zopen packages"** or **"Install everything I need for web development"**? Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), we'll show how this is now possible on z/OS!
+For example, what if I could use natural language to ask an AI to **"Show me all of the installed zopen packages"** or **"Install everything I need for web development"**? 
 
-<a href="/blog/img/in-post/crush.png" class="fancybox" data-fancybox>
+Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), we'll show how this is now possible on z/OS!
 
-With AI terminal agents and MCP, we now have the tools to build a powerful AI assistant for z/OS! 
+<a href="/blog/img/in-post/crush_zopen.gif" class="fancybox" data-fancybox>
+  <img src="/blog/img/in-post/crush_zopen.gif" alt="Crush" title="Perfetto Image">
+</a>
+
+We will leverage the following technologies to make this happen:
 
 * Our custom zopen MCP Server, which translates AI requests into real commands.
-* Ollama or LLamacpp running the an open-source language model directly on my machine or on z/OS.
-* Crush, a terminal-native AI agent that ties everything together.
+* Ollama or LLamacpp running the an open-source language model directly on your workstation or on z/OS.
+* [Crush](https://github.com/charmbracelet/crush), a terminal-native AI agent that ties everything together.
 
 ### What is MCP 
 
@@ -40,13 +44,9 @@ Before we begin, you'll need the following:
 - Go 1.23 or later. For z/OS, you can get Go from the [IBM Open Enterprise SDK for Go](https://www.ibm.com/products/open-enterprise-sdk-go-zos).
 - An environment with `zopen` installed (either locally or on a remote z/OS system). Use these [instructions](https://zopen.community/#/Guides/QuickStart) if you don't have zopen installed.
 
-### The Architecture
-
-You have two primary ways to deploy this solution, depending on your needs; performance, security, etc.
-
 ### Step 1: Choose Your Language Model
 
-The core of our agent is the Large Language Model. You can leverage a cloud LLM, but given that the zopen community is all about open-source I am going to leverage an open-source model. Whether you run it remotely or on z/OS is up to you.
+The core of our agent is the Large Language Model. You can leverage a any LLM, but given that the zopen community is all about open-source I am going to leverage an open-source model. Whether you run it remotely or on z/OS is up to you.
 
 **Option A (Recommended): Run the Model remotely (in my case my Workstation) with Ollama**
 
@@ -60,11 +60,13 @@ If you use Homebrew, you can install it via the command line.
 brew install ollama
 ```
 
-We're going to use qwen3, because it has an 8b parameter model which is not too resource heavy and it does well with coding tasks.
+I'm going to use qwen3, because it has an 8b parameter model which is not too resource heavy and it does well at coding tasks.
 
 In your terminal, run the following command to get the `qwen3:8b` model:
 
 ```bash
+# On your workstation
+ollama serve &
 ollama run qwen3:8b
 ```
 
@@ -72,32 +74,36 @@ Now leave the Ollama application running in the background on your workstation.
 
 **Option B: Run the Model Directly on z/OS with llama.cpp**
 
-For a fully self-contained solution, you can now run a model server directly on z/OS. Follow my previous blog on how to set that up - https://igortodorovskiibm.github.io/blog/2023/08/22/llama-cpp/.
-One other reason for running LLaMa.cpp locally on z/OS is security. Data on z/OS machines is typically sensitive, and as such, many clients choose to air-gap their systems. (Air-gapping isolates a computer or network from external connections). For sensitive industries like finance and healthcare, local AI models are critical for security by limiting exposure to external threats.
+For a fully self-contained solution, you can now run a model server directly on z/OS. Follow my [previous blog](https://igortodorovskiibm.github.io/blog/2023/08/22/llama-cpp/) on how to set that up.
+One reason for running LLaMa.cpp locally on z/OS is security. Data on z/OS machines is typically sensitive, and as such, many clients choose to air-gap their systems. (Air-gapping isolates a computer or network from external connections). For sensitive industries like finance and healthcare, local AI models are critical for security by limiting exposure to external threats.
 
 #### Step 2: The `zopen` MCP Server - Our Custom Tool Bridge
 
-This is the component we built ourselves. The `zopen-mcp-server` is a Go application that acts as a translator. It listens for MCP requests from our AI agent (Crush) and converts them into `zopen` commands. We use the official go mcp sdk (https://github.com/modelcontextprotocol/go-sdk) to create the MCP server. Its core components are:
+This is the component we built ourselves. The `zopen-mcp-server` is a Go application that acts as a translator. It listens for MCP requests from our AI agent (Crush) and converts them into `zopen` commands. We use the official [go mcp sdk](https://github.com/modelcontextprotocol/go-sdk) to create the MCP server. Its core components are:
 
   * **The `mcp.NewServer` Function**: Creates the main server instance.
   * **The `mcp.AddTool` Function**: This is the key. It turns a Go function into a capability that the AI can discover and use. The tool's description is crucial, as it tells the AI what the tool does.
   * **The `main` Function**: This handles startup and configuration, allowing the server to be run as a standalone executable.
 
-The end result is our zopen mcp server, available at https://github.com/IgorTodorovskiIBM/zopen-mcp-server.
+The end result is our zopen mcp server, available at [https://github.com/IgorTodorovskiIBM/zopen-mcp-server](https://github.com/IgorTodorovskiIBM/zopen-mcp-server).
 
-To install the server, you can use `go install`:
+To install the server on z/OS, you can use `go install`:
 
 ```bash
+# On z/OS
 go install github.com/IgorTodorovskiIBM/zopen-mcp-server@v1.0.0
 ```
 
 #### Step 3: Crush, Your Terminal Agent - Now on z/OS!
 
-Crush is the AI agent that will live in your z/OS terminal. As of today, **Crush can be installed and run directly on z/OS** via zopen.
+Crush is the AI agent that will run on your z/OS terminal. As of today, **Crush can be installed and run directly on z/OS** via zopen.
 
 ```bash
+# On z/OS
 zopen install crush
 ```
+
+Before we initialize crush, we need to configure it to use our local LLM.
 
 ### Configuring Crush: The `crush.json` File
 
@@ -105,7 +111,7 @@ The `crush.json` file tells Crush how to connect all the pieces. The configurati
 
 #### Configuration for Workstation Model + z/OS Tools
 
-In this setup, Crush runs on z/OS, talks to your `zopen` server on z/OS, but gets its intelligence from the Ollama server running back on your workstation.
+In this setup, Crush runs on z/OS, talks to your `zopen` server on z/OS, but gets its knowledge from the Ollama server running back on your workstation.
 
 ```json
 {
@@ -113,7 +119,7 @@ In this setup, Crush runs on z/OS, talks to your `zopen` server on z/OS, but get
   "providers": {
     "ollama": {
       "name": "Ollama Workstation",
-      "base_url": "http://<your_workstation_ip>:11434/v1/",
+      "base_url": "http://<your_ip>:11434/v1/",
       "type": "openai",
       "models": [{"name": "Qwen3 8B", "id": "qwen3:8b"}]
     }
@@ -121,37 +127,9 @@ In this setup, Crush runs on z/OS, talks to your `zopen` server on z/OS, but get
   "mcp": {
     "zopen": {
       "type": "stdio",
-      "command": "/path/on/zos/to/zopen-mcp-server",
-      "args": []
+      "command": "/path/on/zos/to/zopen-mcp-server"
     }
   },
-  "permissions": { "allowed_tools": ["mcp_zopen_*"] }
-}
-```
-
-#### Configuration for Everything on z/OS
-
-Here, Crush, the `zopen` server, and the `llama.cpp` server all run on z/OS.
-
-```json
-{
-  "$schema": "https://charm.land/crush.json",
-  "providers": {
-    "llama_cpp_zos": {
-      "name": "Llama.cpp on z/OS",
-      "base_url": "http://localhost:8080/v1/",
-      "type": "openai",
-      "models": [{"name": "Qwen3 8B", "id": "qwen3:8b"}]
-    }
-  },
-  "mcp": {
-    "zopen": {
-      "type": "stdio",
-      "command": "/path/on/zos/to/zopen-mcp-server",
-      "args": []
-    }
-  },
-  "permissions": { "allowed_tools": ["mcp_zopen_*"] }
 }
 ```
 
@@ -159,18 +137,6 @@ Here, Crush, the `zopen` server, and the `llama.cpp` server all run on z/OS.
 
 With your `crush.json` file in place, simply run `crush` in your z/OS terminal. Crush starts, connects to your chosen model server, and automatically launches your `zopen-mcp-server` in the background.
 
-> **Me:** "List the zopen packages installed on the mainframe."
->
-> **Crush:** *(finds the `mcp_zopen_zopen_list` tool and runs it)*
->
-> ```
-> ✅ Command successful: zopen list
-> 
-> Package      Version
-> zopen-build  2.0.0
-> ...
-> 
-> ```
 
 ### Available Tools in the zopen MCP server
 
@@ -188,5 +154,4 @@ The `zopen-mcp-server` now supports the following commands:
 - `zopen_alt`: Switches between different versions of a package.
 
 # Next Steps: An AI Assistant for Porting Apps
-While managing packages is a great first step, the true power of this architecture is in automating complex, knowledge-intensive tasks. My next goal is to tackle one of the most time-consuming parts of my workflow: porting new open-source applications to z/OS.
-
+While managing packages is a great first step, the true power of agentic AI is in automating complex, knowledge-intensive tasks. My next goal is to tackle one of the most time-consuming parts of my workflow: porting new open-source applications to z/OS!
