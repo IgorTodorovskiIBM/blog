@@ -17,7 +17,7 @@ tags:
 
 As a developer in the [zopen community](https://zopen.community/), I’m always looking for ways to streamline my workflow on z/OS. With the rise of agentic AI, I started wondering if I could “agentify” my z/OS workflow.  
 
-Imagine being able to use natural language to automate tasks with familiar tools. For example, what if I could simply ask: **“Show me all of the installed zopen packages”** or **“Install everything I need for web development”**, and have the AI use the zopen package manager to carry it out?
+Imagine being able to use natural language to automate tasks with familiar tools. For example, what if I could simply ask: **“Show me all of the installed zopen packages that are outdated”** or **“Install everything I need for web development”**, and have the AI use the zopen package manager to carry out the task?
 
 Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), this is now possible on z/OS!  
 
@@ -78,7 +78,7 @@ Now leave the Ollama application running in the background on your workstation.
 For a fully self-contained solution, you can now run a model server directly on z/OS. Follow my [previous blog](https://igortodorovskiibm.github.io/blog/2023/08/22/llama-cpp/) on how to set that up.
 One reason for running LLaMa.cpp locally on z/OS is security. Data on z/OS machines is typically sensitive, and as such, many clients choose to air-gap their systems. (Air-gapping isolates a computer or network from external connections). For sensitive industries like finance and healthcare, local AI models are critical for security by limiting exposure to external threats.
 
-#### Step 2: The `zopen` MCP Server - Our Custom Tool Bridge
+### Step 2: The `zopen` MCP Server - Our Custom Tool Bridge
 
 This is the component we built ourselves. The `zopen-mcp-server` is a Go application that acts as a translator. It listens for MCP requests from our AI agent (Crush) and converts them into `zopen` commands. We use the official [go mcp sdk](https://github.com/modelcontextprotocol/go-sdk) to create the MCP server. Its core components are:
 
@@ -95,9 +95,21 @@ To install the server on z/OS, you can use `go install`:
 go install github.com/IgorTodorovskiIBM/zopen-mcp-server@v1.0.0
 ```
 
-#### Step 3: Crush, Your Terminal Agent - Now on z/OS!
+## Step 3: Crush, Your Terminal Agent - Now on z/OS!
 
-Crush is the AI agent that will run on your z/OS terminal. As of today, **Crush can be installed and run directly on z/OS** via zopen.
+Crush is an AI agent that runs directly in your z/OS terminal.  
+
+According to the [Crush repository](https://github.com/charmbracelet/crush), it offers a rich set of features:  
+
+**Features**  
+- **Multi-Model** – Choose from a wide range of LLMs or add your own via OpenAI- or Anthropic-compatible APIs.  
+- **Flexible** – Switch LLMs mid-session while preserving context.  
+- **Session-Based** – Maintain multiple work sessions and contexts per project.  
+- **LSP-Enhanced** – Leverages LSPs for additional context, just like your editor.  
+- **Extensible** – Add capabilities via MCPs (http, stdio, and sse).  
+- **Works Everywhere** – First-class terminal support on macOS, Linux, Windows (PowerShell and WSL), FreeBSD, OpenBSD, and NetBSD.  
+
+And now, thanks to zopen, **Crush can be installed and run directly on z/OS**.  
 
 ```bash
 # On z/OS
@@ -114,6 +126,14 @@ The `crush.json` file tells Crush how to connect all the pieces. The configurati
 
 In this setup, Crush runs on z/OS, talks to your `zopen` server on z/OS, but gets its knowledge from the Ollama server running back on your workstation.
 
+First, create the file in the standard location:
+
+```bash
+mkdir  ~/.local/share/crush/
+vim  ~/.local/share/crush/crush.json
+```
+
+Copy and adjust these contents appropriately:
 ```json
 {
   "$schema": "https://charm.land/crush.json",
@@ -136,27 +156,28 @@ In this setup, Crush runs on z/OS, talks to your `zopen` server on z/OS, but get
 
 ### The Result: An AI-Powered z/OS Workflow!
 
-With your `crush.json` file in place, simply run `crush` in your z/OS terminal. Crush starts, connects to your chosen model server, and automatically launches your `zopen-mcp-server` in the background.
+With your `crush.json` file in place, simply run `crush` in your z/OS terminal. Crush will start, connect to your chosen model server, and automatically launch your `zopen-mcp-server` in the background.  
 
-Let's now ask it a question.
+From here, you can start giving it tasks to automate!  
 
-> Can you clone the git repo https://github.com/git/git (with a depth of 1) and discover the build dependencies that are needed to build it. Check if zopen has these build dependencies present
+> Can you clone the git repo https://github.com/git/git (with a depth of 1) and discover the build dependencies needed to compile it? Check if zopen already has these dependencies available.  
 
 <a href="/blog/img/in-post/crush1.png" class="fancybox" data-fancybox>
   <img src="/blog/img/in-post/crush1.png" alt="Crush" title="Crush Image">
-</a>  
+</a>
 <a href="/blog/img/in-post/crush2.png" class="fancybox" data-fancybox>
   <img src="/blog/img/in-post/crush2.png" alt="Crush" title="Crush Image">
-</a>  
+</a>
 <a href="/blog/img/in-post/crush3.png" class="fancybox" data-fancybox>
   <img src="/blog/img/in-post/crush3.png" alt="Crush" title="Crush Image">
-</a>  
+</a>
 
-As you can see, crush already has support for many tools including git and view to be able to clone and read content. It's also using our zopen mcp server.
+As you can see, Crush already supports many tools, including `git` and `view`, which allow it to clone repositories and read their contents. It also leverages our `zopen-mcp-server` to extend its capabilities.  
 
-It was able to nicely summarize the build depepdencies by inspecting the INSTALL script.
+In this example, it was even able to summarize the build dependencies by inspecting the `INSTALL` script.  
 
 Pretty awesome!
+
 
 ### Available Tools in the zopen MCP server
 
@@ -174,4 +195,10 @@ The `zopen-mcp-server` now supports the following commands:
 - `zopen_alt`: Switches between different versions of a package.
 
 # Next Steps: An AI Assistant for Porting Apps
-While managing packages is a great first step, the true power of agentic AI is in automating complex, knowledge-intensive tasks. My next goal is to tackle one of the most time-consuming parts of my workflow: porting new open-source applications to z/OS!
+While package management is a great first step, the real power of agentic AI lies in automating complex, knowledge-intensive tasks. My next goal is to tackle one of the most time-consuming parts of my workflow: **porting new open-source applications to z/OS**.  
+
+Agentic AI can also assist with debugging issues during the porting process—and much more. Exciting times ahead!
+
+Thank you to Mike Fulton and Andrew Sica for reviewing this post and providing valuable feedback!  
+
+
