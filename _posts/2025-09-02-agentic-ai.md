@@ -18,7 +18,7 @@ As a developer in the [zopen community](https://zopen.community/), I’m always 
 
 Imagine being able to use natural language to automate tasks with familiar tools. For example, what if I could simply ask: **“Show me all of the installed zopen packages that need updating”** or **“Install everything I need for web development”**, and have the AI use its knowledge and the zopen package manager to carry out the task?
 
-Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), this is now possible on z/OS!  
+Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), this is now possible **directly** on z/OS!  
 
 <div style="text-align: center;">
 
@@ -30,9 +30,9 @@ Thanks to Large Language Models (LLMs) and the Model Context Protocol (MCP), thi
 
 To make this work, we combine several key technologies:  
 
-* A custom [zopen MCP Server](https://github.com/IgorTodorovskiIBM/zopen-mcp-server) that translates AI requests into real commands.  
+* A custom [zopen MCP Server](https://github.com/IgorTodorovskiIBM/zopen-mcp-server) that translates AI requests into real zopen commands.  
 * [Ollama](https://github.com/ollama/ollama) or [LLama.cpp](https://github.com/ggml-org/llama.cpp), running an open-source language model directly on your workstation or on z/OS.  
-* [Crush](https://github.com/charmbracelet/crush), an open-source terminal-native AI agent that ties everything together.  
+* [Crush](https://github.com/charmbracelet/crush), an open-source terminal-native AI agent that ties everything together.
 
 
 ### What is MCP 
