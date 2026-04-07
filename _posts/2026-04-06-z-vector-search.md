@@ -1,6 +1,6 @@
 ---
 layout:       post
-title:        "From Porting to RAG: Speeding up llama.cpp and Building a Vector Search Engine for z/OS"
+title:        "From Porting to RAG: Building a Vector Search Engine for z/OS"
 author:       "Igor Todorovski"
 header-img:   "img/in-post/ai_on_z.jpg"
 catalog:      true
@@ -16,134 +16,41 @@ tags:
     - SIMD
 ---
 
-In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we demonstrated that porting LLaMa.cpp to z/OS was not only possible but practical — you really can run a 7B parameter LLM on a mainframe. After that initial port landed, two things started nagging at me.
+In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we demonstrated that porting LLaMa.cpp to z/OS was not only possible but practical — you really can run a 7B parameter LLM on a mainframe. After that initial port landed, I started wondering what else we could build on top of it.
 
-First, it was slow. Correct, but slow. The s390x backend was falling back to scalar code for most of the hot path, leaving real performance on the table. Second, llama.cpp had recently added support for **embedding models** — and if we could get those working on z/OS, it would open the door to something much more interesting than a chatbot demo: a proper semantic search engine, running locally, on the mainframe.
+A chatbot is fun, but the more interesting opportunity is **Retrieval-Augmented Generation (RAG)** — using an LLM not as a know-it-all oracle, but as a reasoning layer over your own data. And the foundation of every RAG system is the same thing: **embeddings**. If we could get embedding models running on z/OS, we could build a proper semantic search engine, locally, on the mainframe — exactly the kind of thing that fits z/OS's air-gapped, data-sensitive workloads.
 
-This post is the story of chasing both threads. It ends with **z-vector-search**, a RAG-powered semantic search engine for z/OS, and **z-console**, a tool that enriches live operator console messages with context from IBM documentation and your system's own operational history.
+The result is **z-vector-search** and **z-console** — a RAG-powered semantic search engine and an operator console enrichment tool, both running natively on z/OS.
 
-Let's walk through how we got there — the wins, the bugs, and the "aha" moments along the way.
+## Getting Embeddings Working on z/OS
 
-## Making llama.cpp Fast on z/OS
+The idea actually came from a [llama.cpp discussion thread](https://github.com/ggml-org/llama.cpp/discussions/7712) about adding embedding model support. Reading through it, I realized that all the pieces I needed to build a z/OS RAG system were already on the table — I just had to wire them up.
 
-Before getting excited about new features, I wanted to fix what was already there. Profiling the existing port showed the hot path exactly where you'd expect it: the quantized matrix-vector multiplies (`ggml_gemv_q4_K_8x4_q8_K`), the elementwise float helpers (`ggml_vec_add_f32`, `ggml_vec_sub_f32`, `ggml_vec_scale_f32`), and the row quantization routine (`quantize_row_q8_K`).
+### What's an embedding, anyway?
 
-On x86, llama.cpp vectorizes all of this with AVX2/AVX-512 intrinsics. On ARM, it uses NEON. On z/OS? **Nothing.** Scalar code everywhere.
+If you've never worked with them, embeddings are the trick that makes "semantic search" possible. An embedding model takes a piece of text and turns it into a list of numbers — a **vector** — that captures its meaning. The clever part is that two pieces of text with similar meanings produce vectors that are mathematically close to each other in space, even if they share no words in common.
 
-### z/Architecture Vector Extensions (VXE)
+That means a search for `"dataset allocation failure"` can find a document that says `"IEC070I"`, because both phrases live near each other in vector space. No keyword matching, no synonyms list, no manual rules. The model has already learned what things *mean*.
 
-IBM Z processors from z13 onwards include the **Vector Facility for z/Architecture** — a SIMD instruction set with 128-bit vector registers, very similar in spirit to SSE/AVX or NEON. The IBM C/C++ compiler exposes these through intrinsics like `vec_xl` (load), `vec_xst` (store), `vec_add`, `vec_mul`, and the widening `vec_mule`/`vec_mulo` (multiply even/odd elements).
+To do search with embeddings, you embed every document once and store the vectors. At query time, you embed the query the same way and find the documents whose vectors are nearest yours. That's the whole game.
 
-The plan was simple: add vectorized s390x implementations for the hot path.
+### The Model
 
-### Vectorizing the Vector Helpers
+The model I chose was **Nomic Embed Text v1.5**. Quantized to Q4_K_M, it's just ~84 MB — small enough to run comfortably on z/OS, and well-regarded for retrieval tasks. It's an **encoder-only** model (think BERT-style), which means it's purpose-built for turning text into vectors rather than generating new text.
 
-The easiest wins were the elementwise float operations in `ggml-cpu/vec.h` — called millions of times per forward pass. Here's the before and after for `ggml_vec_add_f32`:
+### What It Took to Get Working
 
-**Before — scalar:**
-```c
-for (int i = 0; i < n; ++i) {
-    z[i] = x[i] + y[i];
-}
-```
+llama.cpp's embedding support is newer than its text generation support, so a few things needed attention to make it behave on z/OS:
 
-**After — VXE vectorized:**
-```c
-int i = 0;
-#if defined(__VXE__) || defined(__VXE2__) || defined(__MVS__)
-for (; i + 7 < n; i += 8) {
-    vec_xst(vec_add(vec_xl(0, x + i),     vec_xl(0, y + i)),     0, z + i);
-    vec_xst(vec_add(vec_xl(0, x + i + 4), vec_xl(0, y + i + 4)), 0, z + i + 4);
-}
-for (; i + 3 < n; i += 4) {
-    vec_xst(vec_add(vec_xl(0, x + i), vec_xl(0, y + i)), 0, z + i);
-}
-#endif
-for (; i < n; ++i) {
-    z[i] = x[i] + y[i];
-}
-```
+- **Encoder model code path.** Encoder-only models like Nomic take a different route through llama.cpp than decoder models like LLaMa. They produce one vector per input rather than streaming tokens, which means a different API (`llama_encode()` instead of `llama_decode()`) and slightly different batch handling.
 
-Each VXE register holds four floats, so the unrolled loop processes eight floats per iteration. I applied the same treatment to `ggml_vec_sub_f32`, `ggml_vec_acc_f32`, `ggml_vec_mul_f32`, `ggml_vec_scale_f32`, `ggml_vec_mad_f32`, and friends — plus the FP16 variants, which convert on load and store.
+- **Pooling.** The model produces a vector for every token, but you want a single vector per document. Nomic expects MEAN pooling — averaging the per-token vectors together. Getting this wrong produces embeddings that *look* fine but retrieve nonsense.
 
-### The Big One: Q4_K × Q8_K GEMV
+- **Document and query prefixes.** Nomic uses a clever convention where you prepend `search_document:` to text you're indexing and `search_query:` to text you're searching for. This subtly nudges the model to put documents and queries in slightly different regions of the embedding space, which measurably improves retrieval quality. A simple trick, but it makes a real difference.
 
-The real workhorse of quantized inference is the Q4_K × Q8_K matrix-vector multiply. It runs for every weight matrix in every layer, on every forward pass. Adding an s390x-specific implementation had by far the biggest impact.
+- **The endianness problem — again!** Just like with the original llama.cpp port, endianness came back to haunt me. Embedding vectors are arrays of 32-bit floats, and a database built on x86 (little-endian) needs every float byte-swapped before z/OS (big-endian) can read them. I added automatic endianness detection and a `--convert-endian` flag so you can build a knowledge base on a fast Linux box and ship the `.db` file over to z/OS.
 
-I wrote a new file, `ggml/src/ggml-cpu/arch/s390/repack.cpp`, implementing `ggml_gemv_q4_K_8x4_q8_K` with VXE intrinsics. The core primitive is a column-wise dot product that produces four dot products of four elements each in a single SIMD pass:
-
-```cpp
-static inline int32x4_t ggml_vec_dot_col4(int32x4_t acc, int8x16_t a, int8x16_t b) {
-    const int16x8_t ones = vec_splats((int16_t)1);
-    const int16x8_t p = vec_add(vec_mule(a, b), vec_mulo(a, b));
-    return vec_add(acc, vec_add(vec_mule(p, ones), vec_mulo(p, ones)));
-}
-```
-
-`vec_mule` and `vec_mulo` multiply the even and odd lanes respectively, widening from int8 to int16 to avoid overflow. Summed together, they give you the full eight-element product. A second pair of mul-even/mul-odd against a broadcast of 1 performs the horizontal reduction into int32. On z15, this entire sequence retires in just a handful of cycles.
-
-The outer loop decodes the Q4_K scales (those `kmask1`/`kmask2`/`kmask3` bit tricks), broadcasts them into vector registers, and feeds the quantized weights through the dot product. Eight columns are processed in parallel — `sumf_lo` and `sumf_hi` — matching the 8×4 block layout that llama.cpp's repacking uses.
-
-### Vectorized Q8_K Quantization
-
-The input to a quantized GEMV is itself freshly quantized every pass: each activation tensor gets converted to Q8_K format before the matmul. I added an s390x-specific `quantize_row_q8_K` using VXE for the per-group scale-and-round loop, with a nice little trick: `__builtin_s390_vfisb(v, 4, 1)` emits a single **vector float round-to-integer** instruction, which is considerably faster than a scalar rint + convert.
-
-### Build System Integration
-
-None of this compiles unless CMake knows where to find it. I added a z/OS branch to `ggml/src/ggml-cpu/CMakeLists.txt`:
-
-```cmake
-elseif (CMAKE_SYSTEM_NAME STREQUAL "OS390")
-    message(STATUS "z/OS detected")
-    list(APPEND ARCH_FLAGS -fzvector -m64 -march=z15)
-    list(APPEND GGML_CPU_SOURCES ggml-cpu/arch/s390/quants.c)
-    list(APPEND GGML_CPU_SOURCES ggml-cpu/arch/s390/repack.cpp)
-    list(APPEND ARCH_DEFINITIONS GGML_VXE)
-    ...
-```
-
-The `-fzvector` flag is the magic incantation that turns on the VXE intrinsic headers in the IBM C++ compiler for z/OS.
-
-### Optional: IBM MASS Library
-
-IBM's **Mathematical Acceleration Subsystem (MASS)** — specifically the vector flavor, MASSV — provides hand-tuned implementations of transcendental functions (exp, log, sin, cos, pow). I added optional linkage against MASS behind a `GGML_USE_MASSV` CMake flag:
-
-```cmake
-if(GGML_USE_MASSV)
-    target_link_libraries(... "/usr/lpp/cbclib/lib/libmassv.arch${TARGET_ARCH}.a")
-    target_compile_definitions(... GGML_USE_MASS)
-endif()
-```
-
-When enabled, `ggml_vec_exp_f32` and friends route through MASSV for extra speed on activation functions. It's opt-in because `vsexp` has some edge cases in interactive mode I'm still working through.
-
-### The Result
-
-All told, the vectorization work touched five files and added around 900 lines. Matrix-vector multiplies that had been running scalar now benefit from 4-wide SIMD, and the elementwise helpers run 8-wide. Forward passes on a z15 LPAR feel noticeably snappier — enough that running embedding models interactively starts to feel reasonable, which turns out to be important for what comes next.
-
-I plan to clean these patches up and submit them upstream so that every z/OS llama.cpp user benefits, not just those building from my port.
-
-## Getting Embeddings Working
-
-With a faster llama.cpp in hand, it was time to tackle the second thread: embeddings.
-
-Embedding models are the foundation of semantic search. Instead of generating text, they convert text into dense numerical vectors that capture meaning. Two semantically similar pieces of text produce vectors that are close together in vector space — so "dataset allocation failure" and "IEC070I" end up near each other even though they share no keywords.
-
-The model I chose was **Nomic Embed Text v1.5**. Quantized to Q4_K_M, it's just ~84 MB — small enough to run comfortably on z/OS, and well-regarded for retrieval tasks.
-
-Getting it working took some effort:
-
-1. **Encoder model support.** Embedding models like Nomic are encoder-only (think BERT), which take a different code path in llama.cpp than decoder models like LLaMa. I had to ensure `llama_encode()` was being called correctly, with all tokens marked as outputs, and that the batch handling worked for encoder sequences.
-
-2. **MEAN pooling.** The Nomic model uses MEAN pooling to aggregate per-token embeddings into a single document-level vector. Getting this right was essential — a wrong pooling strategy produces embeddings that *look* valid but retrieve nonsense.
-
-3. **Prefix strategy.** Nomic uses a prefix convention: `search_document:` is prepended when indexing, and `search_query:` when querying. This creates better separation between document and query embeddings and measurably improves retrieval accuracy.
-
-4. **The endianness problem — again!** Just like with inference, endianness came back to haunt me. Embedding vectors are arrays of 32-bit floats; a database created on x86 (little-endian) and moved to z/OS (big-endian) needs every float in every vector byte-swapped. I added automatic endianness detection and a `--convert-endian` flag for cross-platform portability.
-
-The debugging process was... educational. My first attempt produced garbage vectors — the KV cache was being contaminated between chunks, so every embedding after the first was polluted with residual state. The fix was to clear the cache between encode calls. Then I discovered the batch size had to match the context size for encoder models, or llama.cpp would silently crash. Each fix peeled back another layer.
-
-But eventually — embeddings working reliably on z/OS. Terrific!
+After working through these, I had embeddings producing sensible vectors on z/OS — and that was enough to start building something real.
 
 ## Building the Search Engine
 
@@ -346,7 +253,7 @@ Messages are grouped into 5-minute time windows and stored with structured metad
 
 ## Measuring Performance
 
-I mentioned "snappier" earlier without showing numbers. Rather than hardcoding them into this post — where they'd go stale the moment you run on different hardware — both `z-query` and `z-console` now support a `--metrics` flag that outputs timing data as JSON on stderr.
+How fast is all of this? Rather than hardcoding numbers into this post — where they'd go stale the moment you run on different hardware — both `z-query` and `z-console` support a `--metrics` flag that outputs timing data as JSON on stderr.
 
 For a query:
 
@@ -385,7 +292,7 @@ Console Messages / Documents
         ↓
    Chunk (256 tokens, 64 overlap)
         ↓
-   Embed (Nomic Embed v1.5 + VXE SIMD)
+   Embed (Nomic Embed v1.5)
         ↓
    L2 Normalize
         ↓
@@ -401,6 +308,26 @@ Console Messages / Documents
 Everything runs locally on z/OS. No external API calls, no cloud dependencies, no data leaving the LPAR. For the air-gapped environments common in finance and healthcare, that's not a nice-to-have — it's a hard requirement.
 
 The entire stack is pure C++17 with vendored SQLite and sqlite-vec, linked against llama.cpp. No Python runtime, no Java, no external dependencies beyond what `zopen` provides.
+
+## Bonus Round: Making llama.cpp Faster on z/OS
+
+Once z-vector-search was working end-to-end, one thing was painfully obvious: it was slow. Not broken — just slow. Embedding a single chunk took longer than it had any right to.
+
+A bit of profiling pointed at the obvious culprits: the quantized matrix-vector multiplies that dominate every forward pass, and the elementwise float helpers (`ggml_vec_add_f32`, `ggml_vec_mul_f32`, and friends) that get called millions of times per query. On x86, llama.cpp vectorizes all of this with AVX2/AVX-512 intrinsics. On ARM, it uses NEON. On z/OS? **Nothing.** The s390x backend was running scalar code through the entire hot path.
+
+This was a great opportunity for some IBM Z SIMD work. IBM Z processors from z13 onwards include the **Vector Facility for z/Architecture (VXE)** — a 128-bit SIMD instruction set conceptually similar to SSE/AVX or NEON — and the IBM C/C++ compiler exposes it via vector intrinsics.
+
+To accelerate this work, I leaned heavily on **[IBM Bob](https://bob.ibm.com/)** — IBM's internal AI assistant — to help me navigate VXE intrinsics, generate first-pass implementations of the s390x vectorized routines, and cross-check the bit-level details of llama.cpp's quantized formats. Pair-programming with Bob turned what would have been weeks of intrinsic spelunking into a much shorter loop of "draft → verify → tune."
+
+The result was a set of new s390x implementations:
+
+- **Vector helpers** — `ggml_vec_add_f32`, `ggml_vec_sub_f32`, `ggml_vec_mul_f32`, `ggml_vec_scale_f32`, `ggml_vec_mad_f32`, and the FP16 variants — now process 8 floats per loop iteration using `vec_xl`/`vec_add`/`vec_xst`.
+- **Q4_K × Q8_K matrix-vector multiply** — a brand new `ggml-cpu/arch/s390/repack.cpp` implementing `ggml_gemv_q4_K_8x4_q8_K` with VXE intrinsics. The core trick is using `vec_mule`/`vec_mulo` (multiply even/odd lanes) to widen int8 → int16 cleanly, then a second pair to horizontally reduce into int32 — the whole sequence retires in a handful of cycles on z15.
+- **Q8_K row quantization** — a vectorized `quantize_row_q8_K` that uses `__builtin_s390_vfisb` to round-and-convert in a single instruction.
+- **CMake plumbing** — a new `OS390` branch in `ggml/src/ggml-cpu/CMakeLists.txt` that turns on `-fzvector -m64 -march=z15` and pulls in the s390x sources.
+- **Optional MASS/MASSV linkage** — IBM's hand-tuned vector math library, gated behind `-DGGML_USE_MASSV=ON`, for faster transcendentals like `exp` and `log`.
+
+Roughly 900 lines of new code across five files. Forward passes on a z15 LPAR feel noticeably snappier as a result, and the `--metrics` numbers above reflect the post-vectorization world. I plan to clean these patches up and submit them upstream so every z/OS llama.cpp user benefits.
 
 ## What's Next
 
@@ -439,6 +366,6 @@ The source code is available on GitHub.
 
 ## Conclusion
 
-What started as "let's make llama.cpp faster on z/OS" turned into a full RAG-powered operational assistant. Each step revealed the next problem worth solving. SIMD vectorization made the inference engine fast enough to be useful. Embeddings gave us semantic understanding. A vector store made it persistent. Hybrid search made it practical for operators who think in message IDs, not natural language. And z-console tied it all together into something that makes the mainframe console genuinely more manageable.
+What started as "can we get embeddings working on z/OS?" turned into a full RAG-powered operational assistant. Each step revealed the next problem worth solving. Embeddings gave us semantic understanding. A vector store made it persistent. Hybrid search made it practical for operators who think in message IDs, not natural language. z-console tied it all together. And along the way, a round of SIMD vectorization made the whole thing fast enough to actually use.
 
 The mainframe has always been about running critical workloads reliably. Now it can understand them too.
