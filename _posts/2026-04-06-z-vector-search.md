@@ -18,7 +18,11 @@ tags:
 
 In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we demonstrated that porting LLaMa.cpp to z/OS was not only possible but practical — you really can run a 7B parameter LLM on a mainframe. After that initial port landed, I started wondering what else we could build on top of it.
 
-A chatbot is fun, but the more interesting opportunity is **Retrieval-Augmented Generation (RAG)** — using an LLM not as a know-it-all oracle, but as a reasoning layer over your own data. And the foundation of every RAG system is the same thing: **embeddings**. If we could get embedding models running on z/OS, we could build a proper semantic search engine, locally, on the mainframe — exactly the kind of thing that fits z/OS's air-gapped, data-sensitive workloads.
+The scenario I had in mind was simple. Picture a z/OS system programmer staring at a console flooded with messages — ABENDs, RACF violations, dataset allocation errors, CICS abends — and trying to figure out which ones matter, what they mean, and whether the system has seen anything like this before. Today, that involves flipping between IBM message manuals, internal runbooks, ticket histories, and tribal knowledge. What if you could just *ask*? "What does this message mean? Has it happened before? What did we do about it last time?"
+
+And critically, I wanted that experience to work **directly on z/OS** — not by shipping log data off to a cloud LLM, not by running a Python notebook on a Linux VM somewhere, but right there on the LPAR where the data already lives. For the air-gapped, data-sensitive workloads that run on mainframes, anything else is a non-starter.
+
+A chatbot is fun, but the right tool for that scenario is **Retrieval-Augmented Generation (RAG)** — using an LLM not as a know-it-all oracle, but as a reasoning layer over your own data. And the foundation of every RAG system is the same thing: **embeddings**. If we could get embedding models running on z/OS, we could build a proper semantic search engine, locally, on the mainframe.
 
 The result is **z-vector-search** and **z-console** — a RAG-powered semantic search engine and an operator console enrichment tool, both running natively on z/OS.
 
