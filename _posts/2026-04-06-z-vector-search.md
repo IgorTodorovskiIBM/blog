@@ -16,15 +16,11 @@ tags:
     - SIMD
 ---
 
-In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we demonstrated that porting LLaMa.cpp to z/OS was not only possible but practical, you really can run a 7B parameter LLM on a mainframe. It was a bit slow, but it worked. After that initial port landed, I started wondering what else we could build on top of it.
+In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we demonstrated that porting llama.cpp to z/OS was not only possible but practical, you really can run a 7B parameter LLM on a mainframe. It was a bit slow, but it worked. After that initial port landed, the natural next question was: what can we actually build on top of it? Text generation is interesting, but the more interesting capability to me was **retrieval**: the ability to index your own data locally on z/OS and search it by meaning, not just keywords. That's what **[z-vector-search](https://github.com/IgorTodorovskiIBM/z-vector-search)** is, a semantic search and indexing engine that runs natively on z/OS, with no cloud dependency and no data leaving the LPAR.
 
-The scenario I had in mind was simple. Picture a z/OS system programmer staring at a console flooded with messages, ABENDs, RACF violations, dataset allocation errors, CICS abends, and trying to figure out which ones matter, what they mean, and whether the system has seen anything like this before. Today, that involves flipping between IBM message manuals, internal runbooks, ticket histories, and tribal knowledge. What if you could just *ask*? "What does this message mean? Has it happened before? What did we do about it last time?"
+The scenario that motivated all of this is simple. Picture a z/OS system programmer staring at a console flooded with messages — ABENDs, RACF violations, dataset allocation errors, CICS abends — trying to figure out which ones matter, what they mean, and whether the system has seen anything like this before. Today that means flipping between IBM message manuals, internal runbooks, ticket histories, and tribal knowledge. What if you could just *ask*? And critically, what if the answer came from **directly on z/OS**, not by shipping log data to a cloud LLM, but right there on the LPAR where the data already lives? The right tool for that is **Retrieval-Augmented Generation (RAG)**: index your own data locally using embeddings, then let the model reason over what it finds.
 
-And critically, I wanted that experience to work **directly on z/OS**, not by shipping log data off to a cloud LLM, not by running a Python notebook on a Linux VM somewhere, but right there on the LPAR where the data already lives. For the air-gapped, data-sensitive workloads that run on mainframes, anything else is a non-starter.
-
-A chatbot is fun, but the right tool for that scenario is **Retrieval-Augmented Generation (RAG)**, using an LLM not as a know-it-all encyclopedia, but as a reasoning layer over your own data. And the foundation of every RAG system is the same thing: **embeddings**. If we could get embedding models running on z/OS, we could build a proper semantic search engine, locally, on the mainframe.
-
-The result is **z-vector-search**, a RAG-powered semantic search engine running natively on z/OS, along with **z-console**, an example prototype built on top of it that enriches operator console messages with relevant context.
+This post covers how we built z-vector-search, the technical decisions behind it, and how **z-console** — an operator console enrichment tool — serves as a prototype real-world application on top of it. Along the way there's also some SIMD vectorization work that made the whole thing fast enough to actually use on z/OS.
 
 ## Getting Embeddings Working on z/OS
 
@@ -58,23 +54,13 @@ After working through these, I had embeddings producing sensible vectors on z/OS
 
 ## Building the Search Engine
 
-With working (and fast) embeddings, the next step was obvious: build a persistent vector store so you could index documents once and query them repeatedly.
+With embeddings now working on z/OS, the next step was obvious: build a persistent vector store so you could index documents once and query them repeatedly.
 
 ### Storage: SQLite + sqlite-vec
 
-I chose **SQLite** as the backend, extended with **sqlite-vec** for vector similarity search. The combination is elegant: no database server to manage, no network dependencies, just a single `.db` file.
+I chose **SQLite** as the backend, extended with **sqlite-vec** for vector similarity search. The combination is simple and elegant: no database server to manage, no network dependencies, just a single `.db` file.
 
-The schema stores each text chunk alongside its embedding and metadata:
-
-```
-chunks table:
-  - filename, snippet (text content)
-  - vec_chunks (embedding vector via sqlite-vec)
-  - source_type, mtime (metadata)
-  - msgid, severity, jobname, sysname (structured fields for console data)
-```
-
-At query time, sqlite-vec performs KNN (k-nearest-neighbor) search using cosine distance. Building sqlite-vec on z/OS took a couple of small patches, guarding BSD `u_int*_t` typedefs behind `__MVS__` and resolving a macro conflict with `sqlite3ext.h`, but nothing dramatic.
+The schema stores each text chunk alongside its embedding and metadata.
 
 ### Chunking
 
@@ -82,14 +68,13 @@ Large documents can't be embedded as a single unit: encoder models have a token 
 
 ### The Tools
 
-The project shipped as a suite of command-line tools:
+The project is composed of a suite of command-line tools:
 
 | Tool | Purpose |
 |------|---------|
 | `z-index` | Index documents into the persistent vector store |
 | `z-query` | Search the store with natural language queries |
 | `z-vector-search` | One-shot mode: index and query without persistence |
-| `z-setup` | First-run setup: download the model, unpack the IBM messages DB |
 
 A typical workflow:
 
@@ -121,17 +106,15 @@ So z-query automatically classifies each query:
 - `why is my CICS transaction failing` → semantic search (natural language)
 - `ICH408I unauthorized access` → hybrid (both, merged)
 
-When both modes run, results are merged using **Reciprocal Rank Fusion (RRF)**, a clever technique for combining ranked lists without needing to normalize scores across different methods. The formula is simple:
+When both modes run, results are merged using **Reciprocal Rank Fusion (RRF)**, a technique for combining ranked lists without needing to normalize scores across different methods. The formula is simple:
 
 ```
 score = Σ 1/(k + rank)    where k = 60
 ```
 
-This gives you the precision of keyword search with the recall of semantic search, and it's the standard approach in modern hybrid retrieval systems.
-
 ## The IBM z/OS Messages Knowledge Base
 
-A semantic search engine is only as good as its data. To make the tool immediately useful for z/OS operators, I built a pre-packaged knowledge base of **24,565 IBM z/OS messages**, covering MVS, RACF, CICS, DB2, MQ, and system abend/wait codes. Each entry includes the message ID, explanation, system action, and operator response.
+A semantic search engine is only as good as its data. To make the tool immediately useful for z/OS operators, I built a pre-packaged knowledge base of **24,565 IBM z/OS messages**, covering MVS and system abend/wait codes. Each entry includes the message ID, explanation, system action, and operator response.
 
 The knowledge base ships as a ready-to-use SQLite database, so `z-query` can answer questions about IBM messages out of the box:
 
@@ -143,15 +126,15 @@ This returns the relevant system code documentation explaining that S0C4 is a pr
 
 ## z-console: RAG for the Operator Console
 
-This is where everything came together.
+**z-console** is a prototype implementation of a real-world scenario built on top of z-vector-search. It's the answer to the question from the intro: what if a z/OS operator could just *ask* about a console message?
 
 The z/OS operator console is the nerve center of a mainframe system. Messages stream in constantly, job completions, security events, storage allocations, errors, abends. Experienced operators know what to look for, but the volume is overwhelming, and critical messages can be buried in noise.
 
-**z-console** reads your console messages and enriches each one with relevant context from both IBM documentation and your system's own history.
+z-console reads your console messages and enriches each one with relevant context from both IBM documentation and your system's own operational history, all by running z-vector-search under the hood.
 
 ### How It Works
 
-1. **Read**, pulls messages from the z/OS SYSLOG via `pcon` (a z/OS utility that reads the system log)
+1. **Read**, pulls messages from the z/OS SYSLOG via `pcon` (an IBM ZOAU utility that reads the system log)
 2. **Filter**, picks out high-value messages: abends (`IEF*`), data errors (`IEC*`), RACF violations (`ICH*`), CICS (`DFH*`), DB2 (`DSN*`), MQ (`CSQ*`), and anything with action/error severity
 3. **Look up**, for each interesting message, runs a two-phase search:
    - **Keyword** against the IBM messages knowledge base, what does this message ID mean?
@@ -231,19 +214,6 @@ Total messages: 847 | Interesting: 23
 
 Fast enough to run frequently, and gives operators an at-a-glance view of system health.
 
-### Message Filtering
-
-Not every z/OS message is worth looking up. High-volume, low-value messages like `$HASP` job queue notifications or `IGD103I` storage allocations would drown out the signal. z-console ships with a default skip list, which operators can customize by editing `~/.z-vector-search/skip_msgids.txt`:
-
-```
-# Trailing * for prefix match
-$HASP*
-IEF196I
-IEF285I
-IGD103I
-IRR010I
-```
-
 ### Building Operational History
 
 To power the "have we seen this before?" lookups, there's a companion tool called `z-ingest-console`. It runs as a background daemon via `z-console-daemon.sh` (every 5 minutes by default) and continuously indexes console messages into the vector store:
@@ -311,35 +281,7 @@ Console Messages / Documents
 
 Everything runs locally on z/OS. No external API calls, no cloud dependencies, no data leaving the LPAR. For the air-gapped environments common in finance and healthcare, that's not a nice-to-have, it's a hard requirement.
 
-The entire stack is pure C++17 with vendored SQLite and sqlite-vec, linked against llama.cpp. No Python runtime, no Java, no external dependencies beyond what `zopen` provides.
-
-## Bonus Round: Making llama.cpp Faster on z/OS
-
-Once z-vector-search was working end-to-end, one thing was painfully obvious: it was slow. Not broken, just slow. Embedding a single chunk took longer than it had any right to.
-
-A bit of profiling pointed at the obvious culprits: the quantized matrix-vector multiplies that dominate every forward pass, and the elementwise float helpers (`ggml_vec_add_f32`, `ggml_vec_mul_f32`, and friends) that get called millions of times per query. On x86, llama.cpp vectorizes all of this with AVX2/AVX-512 intrinsics. On ARM, it uses NEON. On z/OS? **Nothing.** The s390x backend was running scalar code through the entire hot path.
-
-This was a great opportunity for some IBM Z SIMD work. IBM Z processors from z13 onwards include the **Vector Facility for z/Architecture (VXE)**, a 128-bit SIMD instruction set conceptually similar to SSE/AVX or NEON, and the IBM C/C++ compiler exposes it via vector intrinsics.
-
-To accelerate this work, I leaned heavily on **[IBM Bob](https://bob.ibm.com/)**, IBM's internal AI assistant, to help me navigate VXE intrinsics, generate first-pass implementations of the s390x vectorized routines, and cross-check the bit-level details of llama.cpp's quantized formats. Pair-programming with Bob turned what would have been weeks of intrinsic spelunking into a much shorter loop of "draft → verify → tune."
-
-The result was a set of new s390x implementations:
-
-- **Vector helpers**, `ggml_vec_add_f32`, `ggml_vec_sub_f32`, `ggml_vec_mul_f32`, `ggml_vec_scale_f32`, `ggml_vec_mad_f32`, and the FP16 variants, now process 8 floats per loop iteration using `vec_xl`/`vec_add`/`vec_xst`.
-- **Q4_K × Q8_K matrix-vector multiply**, a brand new `ggml-cpu/arch/s390/repack.cpp` implementing `ggml_gemv_q4_K_8x4_q8_K` with VXE intrinsics. The core trick is using `vec_mule`/`vec_mulo` (multiply even/odd lanes) to widen int8 → int16 cleanly, then a second pair to horizontally reduce into int32, the whole sequence retires in a handful of cycles on z15.
-- **Q8_K row quantization**, a vectorized `quantize_row_q8_K` that uses `__builtin_s390_vfisb` to round-and-convert in a single instruction.
-- **CMake plumbing**, a new `OS390` branch in `ggml/src/ggml-cpu/CMakeLists.txt` that turns on `-fzvector -m64 -march=z15` and pulls in the s390x sources.
-- **Optional MASS/MASSV linkage**, IBM's hand-tuned vector math library, gated behind `-DGGML_USE_MASSV=ON`, for faster transcendentals like `exp` and `log`.
-
-Roughly 900 lines of new code across five files. Forward passes on a z15 LPAR feel noticeably snappier as a result, and the `--metrics` numbers above reflect the post-vectorization world. I plan to clean these patches up and submit them upstream so every z/OS llama.cpp user benefits.
-
-## What's Next
-
-A few threads I'd like to pull on:
-
-- **Timeline correlation**, "what else was happening on the system when this error occurred?"
-- **Proactive alerting**, have the daemon watch for patterns and alert operators before problems escalate
-- **Upstreaming**, cleaning up the llama.cpp s390x patches and submitting them to the community so everyone benefits
+The entire stack is pure C++17 with SQLite, sqlite-vec, and llama.cpp. No Python runtime, no Java, no external dependencies beyond what `zopen` provides.
 
 ## Getting Started
 
@@ -349,17 +291,6 @@ The simplest way to get going is straight from zopen:
 
 ```bash
 zopen install z-vector-search
-```
-
-That pulls in llama.cpp and the z-vector-search tools in one shot. If you'd rather build from source:
-
-```bash
-# 1. Install llama.cpp via zopen
-zopen install llamacpp
-
-# 2. Build z-vector-search
-cmake -B build -DLLAMA_ROOT=$ZOPEN_PKGINSTALL/llamacpp
-cmake --build build
 ```
 
 Then, regardless of how you installed:
@@ -378,7 +309,7 @@ z-console "ICH408I USER(BATCH1) GROUP(PROD) LOGON/JOB INITIATION - ACCESS REVOKE
 z-console --pcon -l
 ```
 
-The source code is available on GitHub.
+The source code is available on [GitHub](https://github.com/IgorTodorovskiIBM/z-vector-search).
 
 ## Conclusion
 
