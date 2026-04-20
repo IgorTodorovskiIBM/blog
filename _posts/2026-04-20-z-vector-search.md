@@ -2,7 +2,7 @@
 layout:       post
 title:        "From Porting to RAG: Building a Vector Search Engine for z/OS"
 author:       "Igor Todorovski"
-header-img:   "img/in-post/ai_on_z.jpg"
+header-img:   "img/in-post/rag_bg.png"
 catalog:      true
 tags:
     - z/OS
