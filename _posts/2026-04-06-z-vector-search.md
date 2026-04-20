@@ -16,15 +16,19 @@ tags:
     - SIMD
 ---
 
-In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we demonstrated that porting llama.cpp to z/OS was not only possible but practical, you really can run a 7B parameter LLM on a mainframe. It was a bit slow, but it worked. After that initial port landed, the natural next question was: what can we actually build on top of it? Text generation is interesting, but the more interesting capability to me was **retrieval**: the ability to index your own data locally on z/OS and search it by meaning, not just keywords. That's what **[z-vector-search](https://github.com/IgorTodorovskiIBM/z-vector-search)** is, a semantic search and indexing engine that runs natively on z/OS, with no cloud dependency and no data leaving the LPAR.
+In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we proved that running a 7B parameter LLM on z/OS was possible. It was a milestone, but a model in isolation is just a curiosity. The real question is: **how do we make it useful?** For a z/OS system programmer, utility isn't found in generating poetry; it’s found in navigating the "data deluge" of the operator console.
 
-The scenario that motivated all of this is simple. Picture a z/OS system programmer staring at a console flooded with messages — ABENDs, RACF violations, dataset allocation errors, CICS abends — trying to figure out which ones matter, what they mean, and whether the system has seen anything like this before. Today that means flipping between IBM message manuals, internal runbooks, ticket histories, and tribal knowledge. What if you could just *ask*? And critically, what if the answer came from **directly on z/OS**, not by shipping log data to a cloud LLM, but right there on the LPAR where the data already lives? The right tool for that is **Retrieval-Augmented Generation (RAG)**: index your own data locally using embeddings, then let the model reason over what it finds.
+Today, we’re moving from simple text generation to **semantic retrieval**. This post introduces **[z-vector-search](https://github.com/IgorTodorovskiIBM/z-vector-search)**, a native z/OS engine that allows you to index your own documentation and logs locally. No cloud dependencies, no data leaving the LPAR, and no more manual flipping through IBM manuals. We’re building Retrieval-Augmented Generation (RAG) directly where the data lives.
 
-This post covers how we built z-vector-search, the technical decisions behind it, and how **z-console** — an operator console enrichment tool — serves as a prototype real-world application on top of it. Along the way there's also some SIMD vectorization work that made the whole thing fast enough to actually use on z/OS.
+The scenario that motivated all of this is simple: a z/OS system programmer staring at a console flooded with messages — ABENDs, RACF violations, dataset allocation errors — trying to figure out which ones matter, what they mean, and whether the system has seen anything like this before. Today that means flipping between IBM message manuals, internal runbooks, and ticket histories. What if you could just *ask*? And critically, what if the answer came from **directly on z/OS**, not by shipping log data to a cloud LLM, but right there on the LPAR where the data already lives? 
+
+This post covers how we built z-vector-search, the technical decisions behind it, and how **z-console** — an operator console enrichment tool — serves as a prototype real-world application on top of it. Along the way, we’ll also look at the SIMD vectorization work that made the whole thing fast enough to actually use on z/OS.
 
 ## Getting Embeddings Working on z/OS
 
 The idea actually came from a [llama.cpp discussion thread](https://github.com/ggml-org/llama.cpp/discussions/7712) about adding embedding model support. Reading through it, I realized that all the pieces I needed to build a z/OS RAG system were already on the table, I just had to wire them up.
+
+But "wiring it up" was only possible because of the stable foundation provided by the **[zopen llamacpp port](https://github.com/zopencommunity/llamacppport)**. That port was a true community effort, driven by a dedicated group of volunteers and university students who worked tirelessly to bring modern AI tools to the mainframe. Their contributions to the core infrastructure and math optimizations are what allowed us to reach this point.
 
 ### What's an embedding, anyway?
 
@@ -48,7 +52,7 @@ llama.cpp's embedding support is newer than its text generation support, so a fe
 
 - **Document and query prefixes.** Nomic uses a clever convention where you prepend `search_document:` to text you're indexing and `search_query:` to text you're searching for. This subtly nudges the model to put documents and queries in slightly different regions of the embedding space, which measurably improves retrieval quality. A simple trick, but it makes a real difference.
 
-- **The endianness problem, again!** Just like with the original llama.cpp port, endianness came back to haunt me. Embedding vectors are arrays of 32-bit floats, and a database built on x86 (little-endian) needs every float byte-swapped before z/OS (big-endian) can read them. I added automatic endianness detection and a `--convert-endian` flag so you can build a knowledge base on a fast Linux box and ship the `.db` file over to z/OS.
+- **The endianness problem, again!** Just like with the original llama.cpp port, endianness came back to haunt me. Embedding vectors are arrays of 32-bit floats, and a database built on x86 (little-endian) needs every float byte-swapped before z/OS (big-endian) can read them. I added automatic endianness detection and a `--convert-endian` flag to enable a high-performance hybrid workflow: you can **seed your knowledge base on a fast Linux or macOS box** (where indexing thousands of documents takes seconds) and then ship the `.db` file over to z/OS for production use. This gives you the best of both worlds: massive throughput for the initial data ingestion and secure, local semantic search where it matters most.
 
 After working through these, I had embeddings producing sensible vectors on z/OS, and that was enough to start building something real.
 
@@ -255,9 +259,13 @@ z-console --metrics --pcon -l 2>metrics.json
 
 The key insight from the metrics: model load is a one-time cost of a few seconds, and after that each message enrichment takes well under half a second. Keyword-only modes (`--summary`, pure msgid lookups) skip the model entirely and return in milliseconds. The `--metrics` output lets you measure exactly what matters on your LPAR, under your workload.
 
-## The Full Picture
+## The Full Picture: Enabling RAG Directly on z/OS
 
-Pulling it all together, here's the pipeline that runs every time z-console enriches a message:
+By bringing together embeddings, a persistent vector store, and a hybrid search engine, we’ve enabled a complete **Retrieval-Augmented Generation (RAG) system that works directly on z/OS**. 
+
+For the air-gapped environments common in finance and healthcare, this isn’t just a nice-to-have—it’s a hard requirement. It means you can build intelligent assistants that understand your specific system configuration and historical data without a single byte leaving your secure LPAR.
+
+Here's the full pipeline that runs every time z-console enriches a message:
 
 ```
 Console Messages / Documents
