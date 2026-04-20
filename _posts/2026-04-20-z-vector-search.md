@@ -23,9 +23,9 @@ This blog introduces **[z-vector-search](https://github.com/IgorTodorovskiIBM/z-
 
 The scenario that motivated all of this is simple: a z/OS system programmer staring at a console flooded with messages — ABENDs, RACF violations, dataset allocation errors — trying to figure out which ones matter, what they mean, and whether the system has seen anything like this before. Today that means flipping between IBM message manuals, internal runbooks, and ticket histories. What if you could just *ask*? And what if the answer came from **directly on z/OS**, not by shipping log data to a cloud LLM, but right there on the LPAR where the data already lives? 
 
-This blog covers how we built z-vector-search, the technical decisions behind it, and how **z-console**, an operator console enrichment tool, serves as a prototype real-world application on top of it. 
+This blog covers how we built **z-vector-search**, the technical decisions behind it, and how **z-console**, an operator console enrichment tool, serves as a prototype real-world application on top of it. 
 
-## Build a z/OS RAG system
+## Building a RAG system for z/OS
 
 If you're interested in using the tools and less about learning, go to the [Getting Started](#getting-started) section.
 
