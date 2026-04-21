@@ -26,7 +26,7 @@ The scenario that motivated all of this is simple: a z/OS system programmer star
 This blog covers how we built **z-vector-search**, the technical decisions behind it, and how **z-console**, an operator console enrichment tool, serves as a prototype real-world application on top of it. 
 
 <p style="text-align: center;">
-<img src="/blog/img/in-post/vimgo.gif" alt="tmux.cpp" style="float:center;">
+<img src="/blog/img/in-post/index.gif" alt="tmux.cpp" style="float:center;">
 z-vector-search running directly on z/OS
 </p>
 
