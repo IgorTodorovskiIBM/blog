@@ -15,11 +15,11 @@ tags:
     - SIMD
 ---
 
-In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we proved that running a 7B parameter LLM on z/OS was possible. It was a milestone, but performance made it more of a curiosity than a real thing. The real question is: **how do we make it useful?** For example, a z/OS system programmer doesn't need AI to write poems. They need it to help them manage the thousands of messages on the operator console.
+In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we proved that running a 7B parameter LLM on z/OS was possible. It was a milestone, but performance made it more of a curiosity than a real thing. The real question was no longer whether it could run, but whether it could solve a problem worth solving. On z/OS, that doesn't always mean generating text. Often, it means retrieving the right context at the right moment: helping operators triage the thousands of messages streaming across the console and surface the ones that actually matter.
 
-To make this more practical, we need an approach that works within the platform's performance limits and respects air-gapped environments. This is where **Retrieval-Augmented Generation (RAG)** comes in. By indexing data locally using efficient embedding models, we can achieve fast semantic search results, turning a slow "curiosity" into a practical, real-time RAG tool.
+That makes **Retrieval-Augmented Generation (RAG)** a great fit for z/OS. It works within the platform's performance limits and respects air-gapped environments. By indexing data locally using efficient embedding models, we can achieve fast semantic search results, turning a slow "curiosity" into a practical, real-time RAG tool.
 
-This blog introduces **[z-vector-search](https://github.com/IgorTodorovskiIBM/z-vector-search)**, a native z/OS engine that allows you to index and query your own documentation and logs locally. No cloud dependencies, no data leaving the LPAR, and no more manual flipping through IBM manuals. We’re building RAG directly where the data lives.
+This blog introduces **[z-vector-search](https://github.com/IgorTodorovskiIBM/z-vector-search)**, a native and open source z/OS engine that allows you to index and query your own data locally. No cloud dependencies, no data leaving the LPAR, and no more manual flipping through IBM manuals. It's about building RAG directly where the data lives. Much of the code for the project, including a substantial part of the work needed to get llama.cpp embedding support running cleanly on z/OS, was written with the help of **[IBM Bob](https://bob.ibm.com/)**, IBM's AI-powered development partner.
 
 The scenario that motivated all of this is simple: a z/OS system programmer staring at a console flooded with messages — ABENDs, RACF violations, dataset allocation errors — trying to figure out which ones matter, what they mean, and whether the system has seen anything like this before. Today that means flipping between IBM message manuals, internal runbooks, and ticket histories. What if you could just *ask*? And what if the answer came from **directly on z/OS**, not by shipping log data to a cloud LLM, but right there on the LPAR where the data already lives? 
 
@@ -34,7 +34,7 @@ z-vector-search running directly on z/OS
 
 If you're interested in using the tools and less about learning, go to the [Getting Started](#getting-started) section.
 
-The idea actually came from a [llama.cpp discussion thread](https://github.com/ggml-org/llama.cpp/discussions/7712) about adding embedding model support. Reading through it, I realized that all the pieces I needed to build a z/OS RAG system were already on the table, I just had to wire them up.
+The RAG idea actually came from a [llama.cpp discussion thread](https://github.com/ggml-org/llama.cpp/discussions/7712) about adding embedding model support. Reading through it, I realized that all the pieces I needed to build a z/OS RAG system were already on the table, I just had to wire them up.
 
 But "wiring it up" was only possible because of the stable foundation provided by the **[zopen llamacpp port](https://github.com/zopencommunity/llamacppport)**. That port was a true community effort, driven by a dedicated group of volunteers and university students who worked tirelessly to bring modern AI tools to the mainframe. Their contributions to the core infrastructure and math optimizations are what allowed us to reach this point.
 
@@ -52,7 +52,7 @@ The model I chose was **[Nomic Embed Text v1.5](https://huggingface.co/nomic-ai/
 
 ### What It Took to Get Working
 
-llama.cpp's embedding support is newer than its text generation support, so a few things needed attention to make it behave on z/OS:
+llama.cpp's embedding support is newer than its text generation support, so a few things needed attention to make it behave on z/OS. A substantial part of this implementation work was done with IBM Bob:
 
 - **Encoder model code path.** Encoder-only models like Nomic take a different route through llama.cpp than decoder models like LLaMa. They produce one vector per input rather than streaming tokens, which means a different API (`llama_encode()` instead of `llama_decode()`) and slightly different batch handling.
 
