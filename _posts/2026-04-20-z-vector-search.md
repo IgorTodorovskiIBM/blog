@@ -60,7 +60,7 @@ llama.cpp's embedding support is newer than its text generation support, so a fe
 
 - **Document and query prefixes.** Nomic uses a clever convention where you prepend `search_document:` to text you're indexing and `search_query:` to text you're searching for. This subtly nudges the model to put documents and queries in slightly different regions of the embedding space, which measurably improves retrieval quality. A simple trick, but it makes a real difference.
 
-- **The endianness problem, again!** Just like with the original llama.cpp port, endianness came back to haunt me. Embedding vectors are arrays of 32-bit floats, and a database built on x86 (little-endian) needs every float byte-swapped before z/OS (big-endian) can read them. I added automatic endianness detection and a `--convert-endian` flag to enable a high-performance hybrid workflow: you can **seed your knowledge base on a fast Linux or macOS box** (where indexing thousands of documents takes seconds) and then ship the `.db` file over to z/OS for production use. This gives you the best of both worlds: massive throughput for the initial data ingestion and secure, local semantic search where it matters most.
+- **The endianness problem, again!** Just like with the original llama.cpp port, endianness came back to haunt me. Embedding vectors are arrays of 32-bit floats, and a database built on little-endian platforms needs every float byte-swapped before z/OS (big-endian) can read them. I added automatic endianness detection and a `--convert-endian` flag to enable a high-performance hybrid workflow: you can **seed your knowledge base on a fast Linux or macOS box** (where indexing thousands of documents takes seconds) and then ship the `.db` file over to z/OS for production use. This gives you the best of both worlds: massive throughput for the initial data ingestion and secure, local semantic search where it matters most.
 
 After working through these, I had embeddings producing sensible vectors on z/OS, and that was enough to start building something real.
 
@@ -70,7 +70,7 @@ With embeddings now working on z/OS, the next step was obvious: build a persiste
 
 ### Storage: SQLite + sqlite-vec
 
-I chose **SQLite** as the backend, extended with **[sqlite-vec](https://github.com/asg017/sqlite-vec)** for vector similarity search. The combination is simple and elegant: no database server to manage, no network dependencies, just a single `.db` file.
+I chose **SQLite** as the backend, extended with **[sqlite-vec](https://github.com/asg017/sqlite-vec)** for vector similarity search. The combination made it extremely simple: no database server to manage, no network dependencies, just a single `.db` file.
 
 The schema stores each text chunk alongside its embedding and metadata.
 
@@ -100,7 +100,7 @@ z-index --store ~/my-store.db /path/to/runbooks/*.txt
 z-query --store ~/my-store.db "how do I recover from an IEC070I error"
 ```
 
-The query returns the most semantically relevant chunks, ranked by similarity. No keyword matching needed, if your runbook says "dataset allocation failure" and you search for "IEC070I error," it still finds the right answer.
+The query returns the most semantically relevant chunks, ranked by similarity. If your runbook says "dataset allocation failure" and you search for "IEC070I error," it still finds the right answer.
 
 All tools support `--json` output for scripting, so you can pipe results into `jq`:
 
@@ -140,11 +140,13 @@ This returns the relevant system code documentation explaining that S0C4 is a pr
 
 ## z-console: RAG for the Operator Console
 
-**z-console** is an example implementation of a real-world scenario built on top of z-vector-search. It's the answer to the question from the intro: what if a z/OS operator could just *ask* about a console message?
+The IBM messages knowledge base makes `z-query` useful immediately, but it still assumes someone stops to search. In practice, operators work from a live console, under time pressure, while messages keep arriving. That is where **z-console** comes in.
+
+Built on top of `z-vector-search`, **z-console** brings the same retrieval pipeline directly to the operator console. It is the answer to the question from the intro: what if a z/OS operator could just *ask* about a console message?
 
 It comes pre-packaged with the `z-vector-search` suite.
 
-The z/OS operator console is the nerve center of a mainframe system. Messages stream in constantly, job completions, security events, storage allocations, errors, abends. Experienced operators know what to look for, but the volume is overwhelming, and critical messages can be buried in noise.
+The z/OS operator console is the nerve center of a mainframe system. Messages stream in constantly: job completions, security events, storage allocations, errors, abends. Experienced operators know what to look for, but the volume is overwhelming, and critical messages can be buried in the noise.
 
 It builds directly on the core `z-vector-search` engine, using it as a library to perform real-time semantic lookups.
 
@@ -243,36 +245,6 @@ nohup ./z-console-daemon.sh &
 
 Messages are grouped into 5-minute time windows and stored with structured metadata, message IDs, highest severity, jobname, system name, timestamps. The longer it runs, the more historical context z-console can draw on.
 
-## Measuring Performance
-
-How fast is all of this? Rather than hardcoding numbers into this post, where they'd go stale the moment you run on different hardware, both `z-query` and `z-console` support a `--metrics` flag that outputs timing data as JSON on stderr.
-
-For a query:
-
-```bash
-z-query --metrics "what does abend S0C4 mean" 2>metrics.json
-```
-
-```json
-{"mode":"semantic","model_load_ms":2341.5,"embed_ms":287.3,
- "search_ms":42.1,"total_ms":2812.4,"results":5,"store_chunks":34102}
-```
-
-For z-console, the metrics break down timing across all enriched messages, with per-message averages:
-
-```bash
-z-console --metrics --pcon -l 2>metrics.json
-```
-
-```json
-{"total_parsed":847,"interesting":23,"skipped":824,"unique_ids":14,
- "cache_hits":3,"enriched":11,"model_load_ms":2341.5,
- "total_enrich_ms":4892.1,"total_embed_ms":3156.7,"total_search_ms":1204.8,
- "avg_enrich_ms":444.7,"avg_embed_ms":286.9,"avg_search_ms":109.5}
-```
-
-The key insight from the metrics: model load is a one-time cost of a few seconds, and after that each message enrichment takes well under half a second. Keyword-only modes (`--summary`, pure msgid lookups) skip the model entirely and return in milliseconds. The `--metrics` output lets you measure exactly what matters on your LPAR, under your workload.
-
 ## The Full Picture: Enabling RAG Directly on z/OS
 
 By bringing together embeddings, a persistent vector store, and a hybrid search engine, we’ve enabled a complete **Retrieval-Augmented Generation (RAG) system that works directly on z/OS**. 
@@ -336,3 +308,5 @@ The source code is available on [GitHub](https://github.com/IgorTodorovskiIBM/z-
 ## Conclusion
 
 What started as "can we get embeddings working on z/OS?" turned into a full RAG-powered operational assistant. Each step revealed the next problem worth solving. Embeddings gave us semantic understanding. A vector store made it persistent. Hybrid search made it practical for operators who think in message IDs, not natural language. z-console tied it all together. 
+
+Thank you to Haritha D, Sachin T, Bill O'Farrell and Chad McIntyre for their support and feedback!
