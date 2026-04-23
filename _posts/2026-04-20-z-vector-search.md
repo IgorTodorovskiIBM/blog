@@ -19,11 +19,13 @@ In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/ll
 
 That makes **Retrieval-Augmented Generation (RAG)** a great fit for z/OS. It works within the platform's performance limits and respects air-gapped environments. By indexing data locally using efficient embedding models, we can achieve fast semantic search results, turning a slow "curiosity" into a practical, real-time RAG tool.
 
-This blog introduces **[z-vector-search](https://github.com/IgorTodorovskiIBM/z-vector-search)**, a native and open source z/OS engine that allows you to index and query your own data locally. It is also available as a library, so you can embed the same retrieval pipeline directly into your own applications. No cloud dependencies, no data leaving the LPAR, and no more manual flipping through IBM manuals. It's about building RAG directly where the data lives. It's also worth noting that much of the code for the project, including a substantial part of the work needed to get llama.cpp embedding support running cleanly on z/OS, was written with the help of **[IBM Bob](https://bob.ibm.com/)**, IBM's AI Coding Assistent.
+This blog introduces **[z-vector-search](https://github.com/IgorTodorovskiIBM/z-vector-search)**, a native and open source z/OS engine that allows you to index and query your own data locally. It is also available as a library, so you can embed the same retrieval pipeline directly into your own applications. No cloud dependencies, no data leaving the LPAR, and no more manual flipping through IBM manuals. It's about building RAG directly where the data lives. It's also worth noting that much of the code for the project, including a substantial part of the work needed to get llama.cpp embedding support running cleanly on z/OS, was written with the help of **[IBM Bob](https://bob.ibm.com/)**, IBM's AI Coding Assistant.
 
-The scenario that motivated all of this is simple: a z/OS system programmer staring at a console flooded with messages — ABENDs, RACF violations, dataset allocation errors — trying to figure out which ones matter, what they mean, and whether the system has seen anything like this before. Today that means flipping between IBM message manuals, internal runbooks, and ticket histories. What if you could just *ask*? And what if the answer came from **directly on z/OS**, not by shipping log data to a cloud LLM, but right there on the LPAR where the data already lives? 
+On z/OS, RAG is less about flashy chat demos and more about retrieving the right context from private, operationally sensitive data that often has to stay on-prem: IBM message documentation, internal runbooks, batch procedures, incident histories, exported logs, and site-specific notes. In many enterprise environments, the hard requirement is not "can a model generate an answer?" but "can the retrieval layer run locally on the LPAR without moving the data somewhere else first?"
 
-This blog covers how we built **z-vector-search**, the technical decisions behind it, and how **z-console**, an operator console enrichment tool, serves as a prototype real-world application on top of it. 
+One scenario that motivated all of this is simple: a z/OS system programmer staring at a console flooded with messages — ABENDs, RACF violations, dataset allocation errors — trying to figure out which ones matter, what they mean, and whether the system has seen anything like this before. Today that means flipping between IBM message manuals, internal runbooks, and ticket histories. What if you could just *ask*? And what if the answer came from **directly on z/OS**, not by shipping log data to a cloud LLM, but right there on the LPAR where the data already lives?
+
+This blog covers how we built **z-vector-search**, the technical decisions behind it, and how **z-console**, an operator console enrichment tool, serves as one prototype application built on top of it.
 
 <p style="text-align: center;">
 <img src="/blog/img/in-post/index.gif" alt="tmux.cpp" style="float:center;">
@@ -33,6 +35,12 @@ z-vector-search running directly on z/OS
 ## Building a RAG system for z/OS
 
 If you're interested in using the tools and less about learning, go to the [Getting Started](#getting-started) section.
+
+### What RAG Means on z/OS
+
+For a lot of enterprise systems, the missing piece is not generation, it is retrieval. The useful context already exists, but it is scattered across message manuals, procedures, runbooks, ticket histories, and operational logs. A local retrieval engine turns that fragmented knowledge into something you can actually search with natural language, exact identifiers, or a mix of both.
+
+That is the role of `z-vector-search`. It provides the retrieval layer for on-prem RAG on z/OS: index data locally, search it locally, and return grounded context locally. You can then use that context directly in a CLI, inside an application, or as input to a later generation step. But if retrieval cannot happen securely on the platform where the data lives, the rest of the RAG pipeline is mostly academic.
 
 The RAG idea actually came from a [llama.cpp discussion thread](https://github.com/ggml-org/llama.cpp/discussions/7712) about adding embedding model support. Reading through it, I realized that all the pieces I needed to build a z/OS RAG system were already on the table, I just had to wire them up.
 
@@ -138,9 +146,9 @@ z-query "what does abend S0C4 mean"
 
 This returns the relevant system code documentation explaining that S0C4 is a protection exception, typically caused by a program accessing storage it doesn't own.
 
-## z-console: RAG for the Operator Console
+## z-console: One Application on Top of the Engine
 
-The IBM messages knowledge base makes `z-query` useful immediately, but it still assumes someone stops to search. In practice, operators work from a live console, under time pressure, while messages keep arriving. That is where **z-console** comes in.
+The IBM messages knowledge base makes `z-query` useful immediately, but it is only one way to use the engine. To show what a full application built on top of `z-vector-search` can look like, I also built **z-console**.
 
 Built on top of `z-vector-search`, **z-console** brings the same retrieval pipeline directly to the operator console. It is the answer to the question from the intro: what if a z/OS operator could just *ask* about a console message?
 
@@ -247,14 +255,14 @@ Messages are grouped into 5-minute time windows and stored with structured metad
 
 ## The Full Picture: Enabling RAG Directly on z/OS
 
-By bringing together embeddings, a persistent vector store, and a hybrid search engine, we’ve enabled a complete **Retrieval-Augmented Generation (RAG) system that works directly on z/OS**. 
+By bringing together embeddings, a persistent vector store, and a hybrid search engine, **z-vector-search** provides the retrieval core for a complete **Retrieval-Augmented Generation (RAG) workflow that works directly on z/OS**.
 
-For the air-gapped environments common in finance and healthcare, this isn’t just a nice-to-have—it’s a hard requirement. It means you can build intelligent assistants that understand your specific system configuration and historical data without a single byte leaving your secure LPAR.
+For the air-gapped environments common in finance and healthcare, this isn’t just a nice-to-have, it’s a hard requirement. It means you can build assistants and retrieval-driven tools that understand your specific system configuration and historical data without a single byte leaving your secure LPAR.
 
-Here's the full pipeline that runs every time z-console enriches a message:
+Here is the general pipeline that `z-vector-search` implements, whether the caller is `z-query`, `z-console`, or your own embedded application:
 
 ```
-Console Messages / Documents
+Documents / Logs / Runbooks / Message KB
         ↓
    Tokenize (llama.cpp)
         ↓
@@ -273,7 +281,7 @@ Console Messages / Documents
    Top-K Results with Context
 ```
 
-Everything runs locally on z/OS. No external API calls, no cloud dependencies, no data leaving the LPAR. For the air-gapped environments common in finance and healthcare, that's not a nice-to-have, it's a hard requirement.
+Everything runs locally on z/OS. No external API calls, no cloud dependencies, no data leaving the LPAR. The generation step, if you want one, can sit on top later. The important part is that the retrieval foundation already runs where the data lives.
 
 The entire stack is pure C++17 with SQLite, sqlite-vec, and llama.cpp. No Python runtime, no Java, no external dependencies beyond what `zopen` provides.
 
@@ -296,10 +304,16 @@ z-setup
 # 4. Query the IBM messages knowledge base
 z-query "what does abend S0C4 mean"
 
-# 5. Look up a single console message
+# 5. Index your own runbooks or operational docs
+z-index --store ~/my-store.db /path/to/runbooks/*.txt
+
+# 6. Search them semantically
+z-query --store ~/my-store.db "how do I recover from an IEC070I error"
+
+# 7. Optional: look up a single console message
 z-console "ICH408I USER(BATCH1) GROUP(PROD) LOGON/JOB INITIATION - ACCESS REVOKED"
 
-# 6. Or read the last hour of live console
+# 8. Optional: read the last hour of live console
 z-console --pcon -l
 ```
 
@@ -307,6 +321,6 @@ The source code is available on [GitHub](https://github.com/IgorTodorovskiIBM/z-
 
 ## Conclusion
 
-What started as "can we get embeddings working on z/OS?" turned into a full RAG-powered operational assistant. Each step revealed the next problem worth solving. Embeddings gave us semantic understanding. A vector store made it persistent. Hybrid search made it practical for operators who think in message IDs, not natural language. z-console tied it all together. 
+What started as "can we get embeddings working on z/OS?" turned into a practical retrieval layer for RAG on the mainframe. Embeddings gave us semantic understanding. A vector store made it persistent. Hybrid search made it practical for people who think in message IDs, commands, and procedures, not just natural language. `z-console` tied it into one concrete operator workflow, but the bigger point is that secure, local retrieval on z/OS is now a real building block you can use elsewhere too.
 
 Thank you to Haritha D, Sachin T, Bill O'Farrell and Chad McIntyre for their support and feedback!
