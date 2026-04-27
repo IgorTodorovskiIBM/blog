@@ -15,7 +15,7 @@ tags:
     - SIMD
 ---
 
-In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama.cpp/), we proved that running a 7B parameter LLM on z/OS was possible. It was a milestone, but performance made it more of a curiosity than a real thing. The real question was no longer whether it could run, but whether it could solve a problem worth solving. On z/OS, that doesn't always mean generating text. Often, it means retrieving the right context at the right moment like helping system admins triage the thousands of messages streaming across the console and surface the ones that actually matter.
+In a [previous blog post](https://igortodorovskiibm.github.io/blog/2023/08/22/llama-cpp/), we proved that running a 7B parameter LLM on z/OS was possible. It was a milestone, but performance made it more of a curiosity than a real thing. The real question was no longer whether it could run, but whether it could solve a problem worth solving. On z/OS, that doesn't always mean generating text. Often, it means retrieving the right context at the right moment like helping system admins triage the thousands of messages streaming across the console and surface the ones that actually matter.
 
 That makes **Retrieval-Augmented Generation (RAG)** a great fit for z/OS. It works within the platform's performance limits and respects air-gapped environments. By indexing data locally using efficient embedding models, we can achieve fast semantic search results, turning a slow "curiosity" into a practical, real-time RAG tool.
 
